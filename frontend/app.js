@@ -67,6 +67,8 @@ const i18n = {
 
 let currentLang = 'en';
 let currentPersona = 'arun.kumar';
+let currentUser = null;
+let currentUserRole = 'EMPLOYEE';
 let activeView = 'dashboard';
 let currentEmployeeId = 1;
 
@@ -152,6 +154,9 @@ function checkAuthSession() {
   if (savedToken && savedUser) {
     try {
       const user = JSON.parse(savedUser);
+      currentUser = user;
+      currentUserRole = user.role || 'EMPLOYEE';
+      activeView = getDefaultViewForRole(currentUserRole);
       loginSuccess(user, false);
       return;
     } catch (e) {
@@ -443,6 +448,8 @@ function loginSuccess(userData, shouldSave = true) {
     localStorage.setItem('cadre_user', JSON.stringify(userData));
   }
 
+  currentUser = userData;
+  currentUserRole = userData.role || 'EMPLOYEE';
   currentPersona = userData.username;
   currentEmployeeId = userData.employee_id || 1;
 
@@ -466,16 +473,8 @@ function loginSuccess(userData, shouldSave = true) {
     authRoleBadge.textContent = `${userData.full_name} (${roleLabel})`;
   }
 
-  // Set default view based on role
-  if (userData.role === 'TRAINER') {
-    activeView = 'trainer_studio';
-  } else if (userData.role === 'DEPT_ADMIN') {
-    activeView = 'analytics';
-  } else if (userData.role === 'SYSTEM_ADMIN') {
-    activeView = 'admin';
-  } else {
-    activeView = 'dashboard';
-  }
+  // Set default view strictly based on role
+  activeView = getDefaultViewForRole(userData.role);
 
   loadNotifications();
   setupPersonaNavigation();
@@ -488,8 +487,11 @@ function handleLogout() {
   localStorage.removeItem('cadre_user');
   sessionStorage.clear();
   isAuthenticated = false;
+  currentUser = null;
+  currentUserRole = 'EMPLOYEE';
   currentPersona = null;
   currentEmployeeId = null;
+  activeView = 'dashboard';
   state = {
     profile: null,
     competencies: [],
@@ -858,45 +860,63 @@ function openAIIntegrationGuideModal() {
 }
 
 
-function setupPersonaNavigation() {
-  const navContainer = document.getElementById('sidebar-nav');
-  let navItems = [];
+function getDefaultViewForRole(role) {
+  if (role === 'TRAINER') return 'trainer_studio';
+  if (role === 'DEPT_ADMIN') return 'analytics';
+  if (role === 'SYSTEM_ADMIN') return 'admin';
+  return 'dashboard';
+}
 
-  if (currentPersona === 'arun.kumar') {
-    navItems = [
+function getRoleNavItems(role) {
+  if (role === 'EMPLOYEE') {
+    return [
       { id: 'dashboard', label: t('nav.dashboard'), icon: 'layout-dashboard' },
-      { id: 'mcq_test_studio', label: t('nav.mcqExam'), icon: 'award' },
       { id: 'competencies', label: t('nav.competencies'), icon: 'check-circle' },
       { id: 'skill_gaps', label: t('nav.skillGaps'), icon: 'git-pull-request' },
       { id: 'learning_paths', label: t('nav.learningPaths'), icon: 'map' },
       { id: 'courses', label: t('nav.courses'), icon: 'book-open' },
       { id: 'assessments', label: t('nav.assessments'), icon: 'check-square' }
     ];
-  } else if (currentPersona === 'priya.sharma') {
-    navItems = [
+  } else if (role === 'TRAINER') {
+    return [
       { id: 'trainer_studio', label: t('nav.trainerStudio'), icon: 'cpu' },
       { id: 'mcq_test_studio', label: t('nav.mcqExam'), icon: 'award' },
-      { id: 'assessments', label: t('nav.assessments'), icon: 'check-square' },
-      { id: 'courses', label: t('nav.courses'), icon: 'book-open' },
-      { id: 'analytics', label: t('nav.analytics'), icon: 'pie-chart' }
+      { id: 'assessments', label: 'Question Bank & Quizzes', icon: 'check-square' },
+      { id: 'courses', label: 'Course Catalog & Syllabi', icon: 'book-open' },
+      { id: 'analytics', label: 'Cadre Training Analytics', icon: 'pie-chart' }
     ];
-  } else if (currentPersona === 'rajesh.verma') {
-    navItems = [
-      { id: 'analytics', label: t('nav.analytics'), icon: 'pie-chart' },
-      { id: 'mcq_test_studio', label: t('nav.mcqExam'), icon: 'award' },
-      { id: 'dashboard', label: t('nav.dashboard'), icon: 'layout-dashboard' },
-      { id: 'courses', label: t('nav.courses'), icon: 'book-open' },
-      { id: 'admin', label: t('nav.admin'), icon: 'settings' }
+  } else if (role === 'DEPT_ADMIN') {
+    return [
+      { id: 'analytics', label: 'Workforce & Cadre Analytics', icon: 'pie-chart' },
+      { id: 'competencies', label: 'Cadre Competency Matrix', icon: 'check-circle' },
+      { id: 'skill_gaps', label: 'Divisional Skill Gaps', icon: 'git-pull-request' },
+      { id: 'courses', label: 'Department Training Catalog', icon: 'book-open' },
+      { id: 'assessments', label: 'Cadre Assessment Oversight', icon: 'check-square' }
     ];
-  } else {
-    navItems = [
+  } else if (role === 'SYSTEM_ADMIN') {
+    return [
       { id: 'admin', label: t('nav.admin'), icon: 'settings' },
-      { id: 'mcq_test_studio', label: t('nav.mcqExam'), icon: 'award' },
-      { id: 'analytics', label: t('nav.analytics'), icon: 'pie-chart' },
-      { id: 'dashboard', label: t('nav.dashboard'), icon: 'layout-dashboard' },
-      { id: 'trainer_studio', label: t('nav.trainerStudio'), icon: 'cpu' }
+      { id: 'analytics', label: 'System & Platform Telemetry', icon: 'pie-chart' },
+      { id: 'courses', label: 'Course Catalog Registry', icon: 'book-open' },
+      { id: 'assessments', label: 'Assessment Registry', icon: 'check-square' }
     ];
   }
+  return [
+    { id: 'dashboard', label: t('nav.dashboard'), icon: 'layout-dashboard' },
+    { id: 'competencies', label: t('nav.competencies'), icon: 'check-circle' },
+    { id: 'skill_gaps', label: t('nav.skillGaps'), icon: 'git-pull-request' },
+    { id: 'learning_paths', label: t('nav.learningPaths'), icon: 'map' },
+    { id: 'courses', label: t('nav.courses'), icon: 'book-open' },
+    { id: 'assessments', label: t('nav.assessments'), icon: 'check-square' }
+  ];
+}
+
+function setupPersonaNavigation() {
+  const navContainer = document.getElementById('sidebar-nav');
+  if (!navContainer) return;
+
+  const role = (currentUser && currentUser.role) || currentUserRole || 'EMPLOYEE';
+  const navItems = getRoleNavItems(role);
 
   navContainer.innerHTML = navItems.map(item => `
     <button onclick="loadView('${item.id}')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left transition ${activeView === item.id ? 'bg-govNavy-800 text-white font-semibold shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}">
@@ -905,18 +925,27 @@ function setupPersonaNavigation() {
     </button>
   `).join('');
 
-  lucide.createIcons();
+  if (window.lucide) lucide.createIcons();
 }
 
 // -------------------------------------------------------------
 // 4. View Router & View Renderers
 // -------------------------------------------------------------
 async function loadView(viewName) {
+  const role = (currentUser && currentUser.role) || currentUserRole || 'EMPLOYEE';
+  const allowedItems = getRoleNavItems(role);
+  const allowedIds = allowedItems.map(item => item.id);
+
+  if (!allowedIds.includes(viewName)) {
+    console.warn(`View '${viewName}' is not permitted for role '${role}'. Redirecting to default.`);
+    viewName = getDefaultViewForRole(role);
+  }
+
   activeView = viewName;
   setupPersonaNavigation();
   const main = document.getElementById('main-content');
   main.innerHTML = `<div class="p-12 text-center text-slate-400"><i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto text-govNavy-700 mb-3"></i><p>Loading cadre intelligence view...</p></div>`;
-  lucide.createIcons();
+  if (window.lucide) lucide.createIcons();
 
   try {
     if (viewName === 'dashboard') {
@@ -3416,5 +3445,7 @@ window.stopMCQExamTimer = stopMCQExamTimer;
 window.startQuizModalTimer = startQuizModalTimer;
 window.stopQuizModalTimer = stopQuizModalTimer;
 window.openAIIntegrationGuideModal = openAIIntegrationGuideModal;
+window.getDefaultViewForRole = getDefaultViewForRole;
+window.getRoleNavItems = getRoleNavItems;
 
 
