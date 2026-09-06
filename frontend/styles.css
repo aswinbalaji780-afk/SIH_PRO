@@ -1,0 +1,74 @@
+/* Government Enterprise Design System Styles */
+
+:root {
+  --color-gov-navy: #0c2340;
+  --color-gov-navy-dark: #07162c;
+  --color-bharat-teal: #008080;
+  --color-saffron-amber: #d97706;
+  --color-emerald-success: #10b981;
+  --color-critical-red: #dc2626;
+  --color-neutral-slate: #f8fafc;
+}
+
+body {
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Professional Card Hover & Focus States */
+.gov-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  transition: all 0.2s ease-in-out;
+}
+.gov-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px -2px rgba(12, 35, 64, 0.06), 0 2px 6px -1px rgba(12, 35, 64, 0.03);
+}
+
+/* Accessibility Focus Ring */
+button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible {
+  outline: 2px solid #008080;
+  outline-offset: 2px;
+}
+
+/* Radar & Circular Progress indicator */
+.progress-ring-circle {
+  transition: stroke-dashoffset 0.5s ease-in-out;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+
+/* Heatmap Grid Cell */
+.heatmap-cell {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.heatmap-cell:hover {
+  transform: scale(1.05);
+  z-index: 10;
+}
+
+/* AI Copilot Animation */
+@keyframes pulseSubtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+.ai-pulse {
+  animation: pulseSubtle 3s infinite ease-in-out;
+}

@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: mospi_skill_intelligence_app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - HOST=0.0.0.0
+      - ENVIRONMENT=production
+      - DATABASE_URL=sqlite:///./skill_intelligence.db
+      - JWT_SECRET=mospi-secret-key-capacity-building-2026-production-ready
+      - MOCK_IGOT=True
+      - MOCK_NSSTA=True
+      - AI_PROVIDER=grounded_rag_llm
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

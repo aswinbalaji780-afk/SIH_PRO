@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>National Skill Intelligence & Learning Platform | MoSPI - NSSTA - iGOT</title>
+  <meta name="description" content="AI-Enabled Skill Intelligence, Competency Assessment & Capacity Building for India's Official Statistical System">
+  
+  <!-- Fonts: Inter & Noto Sans Devanagari for Hindi -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS & Lucide Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js for data visualization -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            govNavy: {
+              900: '#07162c',
+              800: '#0c2340',
+              700: '#13355d',
+              600: '#1e487b'
+            },
+            bharatTeal: {
+              600: '#008080',
+              500: '#0e9494',
+              400: '#20b2aa'
+            },
+            saffron: {
+              600: '#d97706',
+              500: '#f59e0b',
+              100: '#fef3c7'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'Noto Sans Devanagari', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col selection:bg-bharatTeal-500 selection:text-white">
+
+  <!-- ======================================================== -->
+  <!-- TOP GOVERNMENT HEADER & CITIZEN/CADRE STRIP -->
+  <!-- ======================================================== -->
+  <div class="bg-govNavy-900 text-slate-300 text-xs py-1 px-4 sm:px-6 flex justify-between items-center border-b border-govNavy-800">
+    <div class="flex items-center space-x-3">
+      <span class="font-semibold tracking-wider text-slate-200">भारत सरकार | GOVERNMENT OF INDIA</span>
+      <span class="text-slate-500">|</span>
+      <span>Ministry of Statistics & Programme Implementation (MoSPI)</span>
+    </div>
+    <div class="flex items-center space-x-4">
+      <!-- Language Switcher -->
+      <div class="flex items-center space-x-1 bg-govNavy-800 px-2 py-0.5 rounded border border-govNavy-700">
+        <button id="lang-en" onclick="setLanguage('en')" class="px-1.5 py-0.5 rounded font-medium text-white bg-govNavy-700 transition">English</button>
+        <span class="text-slate-500">/</span>
+        <button id="lang-hi" onclick="setLanguage('hi')" class="px-1.5 py-0.5 rounded font-medium text-slate-400 hover:text-white transition">हिंदी</button>
+      </div>
+      <!-- Cadre Badge -->
+      <span class="hidden md:inline-flex items-center text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded text-[11px] border border-emerald-800/40">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>
+        ISS / SSS Official Cadre Portal
+      </span>
+    </div>
+  </div>
+
+  <!-- MAIN APP HEADER -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Brand & Emblems -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded bg-govNavy-800 flex items-center justify-center text-white font-bold shadow">
+          <i data-lucide="bar-chart-3" class="w-6 h-6 text-saffron-500"></i>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold text-govNavy-900 leading-tight tracking-tight">
+            Skill<span class="text-bharatTeal-600">Intel</span> <span class="text-slate-400 font-normal text-sm">| NSSTA & iGOT</span>
+          </h1>
+          <p class="text-[11px] text-slate-500 tracking-wide font-medium" data-i18n="header.subtitle">AI-Enabled Statistical Cadre Intelligence Platform</p>
+        </div>
+      </div>
+
+      <!-- Authenticated Header Controls (Persona Switcher, AI Trigger, Notifications, Profile & Sign Out) -->
+      <div class="hidden flex items-center space-x-3" id="auth-header-controls">
+        
+        <!-- Verified Active Session Badge (Strict Account Isolation) -->
+        <div class="flex items-center space-x-2 bg-slate-100/90 py-1.5 px-3 rounded-lg border border-slate-200 text-xs shadow-2xs">
+          <span class="flex h-2 w-2 relative">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <div class="flex flex-col text-left">
+            <span class="text-[10px] uppercase tracking-wider text-slate-400 font-bold leading-none">Active Cadre</span>
+            <span id="header-authenticated-role" class="font-bold text-govNavy-900 leading-tight">Learner / Official</span>
+          </div>
+        </div>
+
+        <!-- AI Assistant Shortcut -->
+        <button onclick="toggleAIAssistant()" class="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-govNavy-800 text-white rounded-lg text-xs font-semibold hover:bg-govNavy-700 transition shadow-sm border border-govNavy-700">
+          <i data-lucide="sparkles" class="w-4 h-4 text-saffron-500"></i>
+          <span class="hidden md:inline" data-i18n="header.aiAssistant">AI Copilot</span>
+        </button>
+
+        <!-- Notification Bell -->
+        <div class="relative">
+          <button onclick="toggleNotifications()" class="p-2 text-slate-600 hover:text-govNavy-900 rounded-lg hover:bg-slate-100 relative">
+            <i data-lucide="bell" class="w-5 h-5"></i>
+            <span id="notif-badge" class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
+          </button>
+          <!-- Notification Dropdown -->
+          <div id="notif-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50">
+            <div class="px-4 py-2 border-b border-slate-100 flex justify-between items-center">
+              <span class="font-semibold text-xs text-slate-800" data-i18n="notifications.title">Cadre Notifications</span>
+              <span class="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded font-medium">Official</span>
+            </div>
+            <div id="notif-list" class="max-h-64 overflow-y-auto divide-y divide-slate-100 text-xs">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Officer Profile Chip & Logout -->
+        <div class="flex items-center space-x-2 pl-2 border-l border-slate-200" id="user-profile-chip">
+          <div class="w-8 h-8 rounded-full bg-govNavy-800 text-white flex items-center justify-center font-bold text-xs" id="user-avatar">
+            AK
+          </div>
+          <div class="hidden lg:block text-left">
+            <p class="text-xs font-semibold text-slate-800 leading-tight" id="user-name">Arun Kumar</p>
+            <p class="text-[10px] text-slate-500" id="user-role">Statistical Officer</p>
+          </div>
+          <button type="button" onclick="handleLogout()" id="btn-sign-out" title="Sign Out of Official Session" class="ml-2 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 font-bold rounded-lg text-xs transition flex items-center space-x-1.5 border border-red-200 shadow-sm cursor-pointer">
+            <i data-lucide="log-out" class="w-3.5 h-3.5 text-red-600"></i>
+            <span>Sign Out</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Guest / Authentication Portal Header Badge -->
+      <div id="guest-header-badge" class="flex items-center space-x-2">
+        <span class="px-3 py-1.5 bg-slate-100 border border-slate-200 text-slate-600 text-xs font-semibold rounded-lg flex items-center space-x-1.5">
+          <i data-lucide="shield" class="w-3.5 h-3.5 text-govNavy-700"></i>
+          <span>Official Portal Session: Signed Out</span>
+        </span>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ======================================================== -->
+  <!-- DEDICATED MULTI-ROLE AUTHENTICATION & REGISTRATION PORTAL -->
+  <!-- ======================================================== -->
+  <div id="auth-portal" class="hidden flex-1 flex items-center justify-center py-10 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-100 to-slate-200">
+    <div class="max-w-3xl w-full bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+      
+      <!-- Auth Header Banner -->
+      <div class="bg-govNavy-900 text-white p-6 sm:p-8 text-center relative">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-govNavy-800 text-saffron-500 mb-3 border border-govNavy-700 shadow-inner">
+          <i data-lucide="shield-check" class="w-7 h-7"></i>
+        </div>
+        <h2 class="text-xl sm:text-2xl font-bold tracking-tight">National Skill Intelligence & Learning Platform</h2>
+        <p class="text-xs sm:text-sm text-slate-300 mt-1 max-w-lg mx-auto">
+          Official Statistical System Capacity Building • MoSPI • NSSTA • iGOT Karmayogi
+        </p>
+        <span class="inline-block mt-3 text-[10px] font-bold uppercase tracking-wider bg-govNavy-800/90 text-saffron-500 px-3 py-1 rounded-full border border-govNavy-700">
+          Govt. of India Enterprise Single Sign-On Ready
+        </span>
+      </div>
+
+      <!-- Role Selection Strip (4 Portals) -->
+      <div class="bg-slate-50 border-b border-slate-200 px-4 py-3">
+        <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 text-center">Select Official Access Cadre:</p>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs" id="auth-role-tabs">
+          <button type="button" onclick="selectAuthRole('EMPLOYEE')" id="role-tab-EMPLOYEE" class="py-2 px-3 rounded-lg font-semibold flex items-center justify-center space-x-1.5 transition bg-govNavy-800 text-white shadow-sm">
+            <i data-lucide="user-check" class="w-4 h-4 text-saffron-500"></i>
+            <span>Learner / Official</span>
+          </button>
+          <button type="button" onclick="selectAuthRole('TRAINER')" id="role-tab-TRAINER" class="py-2 px-3 rounded-lg font-semibold flex items-center justify-center space-x-1.5 transition bg-white text-slate-700 hover:bg-slate-100 border border-slate-200">
+            <i data-lucide="graduation-cap" class="w-4 h-4 text-blue-600"></i>
+            <span>Trainer / Faculty</span>
+          </button>
+          <button type="button" onclick="selectAuthRole('DEPT_ADMIN')" id="role-tab-DEPT_ADMIN" class="py-2 px-3 rounded-lg font-semibold flex items-center justify-center space-x-1.5 transition bg-white text-slate-700 hover:bg-slate-100 border border-slate-200">
+            <i data-lucide="building-2" class="w-4 h-4 text-amber-600"></i>
+            <span>Dept Administrator</span>
+          </button>
+          <button type="button" onclick="selectAuthRole('SYSTEM_ADMIN')" id="role-tab-SYSTEM_ADMIN" class="py-2 px-3 rounded-lg font-semibold flex items-center justify-center space-x-1.5 transition bg-white text-slate-700 hover:bg-slate-100 border border-slate-200">
+            <i data-lucide="sliders" class="w-4 h-4 text-purple-600"></i>
+            <span>System Admin</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab Switcher: Sign In vs Register -->
+      <div class="flex border-b border-slate-200 bg-white">
+        <button type="button" onclick="setAuthMode('login')" id="tab-login" class="flex-1 py-3 text-xs font-bold border-b-2 border-govNavy-800 text-govNavy-900 flex items-center justify-center space-x-1.5">
+          <i data-lucide="log-in" class="w-4 h-4 text-bharatTeal-600"></i>
+          <span>Official Sign In</span>
+        </button>
+        <button type="button" onclick="setAuthMode('register')" id="tab-register" class="flex-1 py-3 text-xs font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-700 flex items-center justify-center space-x-1.5">
+          <i data-lucide="user-plus" class="w-4 h-4"></i>
+          <span>Register New Cadre Profile</span>
+        </button>
+      </div>
+
+      <!-- Auth Form Container -->
+      <div class="p-6 sm:p-8">
+        
+        <!-- LOGIN FORM -->
+        <form id="form-login" onsubmit="handleLoginSubmit(event)" class="space-y-4">
+          <div class="bg-blue-50/70 p-3 rounded-lg border border-blue-100 flex items-center space-x-2 text-xs text-blue-900 mb-2">
+            <i data-lucide="info" class="w-4 h-4 shrink-0 text-blue-600"></i>
+            <span id="login-role-hint">Signing in to <b>Learner / Statistical Official Portal</b>. Use your cadre credentials.</span>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Official Username or Email</label>
+            <div class="relative">
+              <input type="text" id="login-username" required placeholder="e.g. arun.kumar" class="w-full text-xs py-2.5 pl-9 pr-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-govNavy-700 focus:outline-none">
+              <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Cadre Access Password</label>
+            <div class="relative">
+              <input type="password" id="login-password" required placeholder="••••••••" class="w-full text-xs py-2.5 pl-9 pr-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-govNavy-700 focus:outline-none">
+              <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-xs text-slate-500 pt-1">
+            <label class="flex items-center space-x-2 cursor-pointer">
+              <input type="checkbox" id="login-remember" checked class="rounded text-govNavy-800 focus:ring-govNavy-700">
+              <span>Remember official session</span>
+            </label>
+            <span class="text-[11px] text-slate-400">Default Demo Password: <code class="bg-slate-100 px-1 py-0.5 rounded font-mono">password123</code></span>
+          </div>
+
+          <button type="submit" id="btn-login-submit" class="w-full py-3 bg-govNavy-800 text-white rounded-lg text-xs font-bold hover:bg-govNavy-700 transition shadow flex items-center justify-center space-x-2 mt-2">
+            <i data-lucide="log-in" class="w-4 h-4 text-saffron-500"></i>
+            <span>Sign In to Cadre Intelligence</span>
+          </button>
+
+          <!-- 1-Click Quick Demo Login Pill -->
+          <div class="pt-4 border-t border-slate-100 text-center">
+            <p class="text-[11px] text-slate-400 mb-2">Evaluator Fast-Track:</p>
+            <button type="button" id="btn-quick-demo" onclick="handleQuickDemoLogin()" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold border border-slate-200 transition flex items-center justify-center space-x-2">
+              <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-500"></i>
+              <span id="quick-demo-label">⚡ 1-Click Sign In as Arun Kumar (Learner)</span>
+            </button>
+          </div>
+        </form>
+
+        <!-- REGISTRATION FORM -->
+        <form id="form-register" onsubmit="handleRegisterSubmit(event)" class="hidden space-y-4">
+          <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-100 flex items-center space-x-2 text-xs text-emerald-900 mb-2">
+            <i data-lucide="user-plus" class="w-4 h-4 shrink-0 text-emerald-600"></i>
+            <span id="register-role-hint">Registering a new <b>Learner / Official Cadre Account</b>. Role framework will be auto-bound.</span>
+          </div>
+
+          <!-- Common Fields -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Full Name (with Cadre/Initials)</label>
+              <input type="text" id="reg-fullname" required placeholder="e.g. Meera Iyer, ISS" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:ring-1 focus:ring-govNavy-700">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Official Username</label>
+              <input type="text" id="reg-username" required placeholder="e.g. meera.iyer" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:ring-1 focus:ring-govNavy-700">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Government Email ID</label>
+              <input type="email" id="reg-email" required placeholder="e.g. meera.iyer@mospi.gov.in" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:ring-1 focus:ring-govNavy-700">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Set Password</label>
+              <input type="password" id="reg-password" required placeholder="Minimum 6 characters" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:ring-1 focus:ring-govNavy-700">
+            </div>
+          </div>
+
+          <!-- ROLE SPECIFIC DYNAMIC FIELDS -->
+          <div id="dynamic-role-fields" class="space-y-4 pt-2 border-t border-slate-100">
+            <!-- Injected dynamically via JS based on selected role tab -->
+          </div>
+
+          <button type="submit" class="w-full py-3 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-500 transition shadow flex items-center justify-center space-x-2 mt-4">
+            <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+            <span>Submit Registration & Enter Cadre Portal</span>
+          </button>
+        </form>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MAIN LAYOUT: SIDEBAR + VIEWPORT -->
+  <!-- ======================================================== -->
+  <div id="app-viewport" class="flex-1 flex max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 gap-6">
+
+    <!-- SIDEBAR NAVIGATION -->
+    <aside class="w-64 shrink-0 hidden md:block">
+      <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm sticky top-24">
+        
+        <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-3 mb-2" data-i18n="nav.menu">Portal Menu</p>
+        
+        <nav class="space-y-1 text-sm font-medium" id="sidebar-nav">
+          <!-- Dynamically customized per persona in app.js -->
+        </nav>
+
+        <hr class="my-4 border-slate-100">
+
+        <!-- Integration Status Widget -->
+        <div class="bg-slate-50 rounded-lg p-3 border border-slate-200 text-xs">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="font-semibold text-slate-700">Integrations</span>
+            <span class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-medium">SANDBOX</span>
+          </div>
+          <div class="space-y-1 text-[11px] text-slate-600">
+            <div class="flex items-center justify-between">
+              <span class="flex items-center"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>iGOT Karmayogi</span>
+              <span class="text-slate-400">v1.4</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="flex items-center"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>NSSTA TPAC</span>
+              <span class="text-slate-400">2026-27</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="flex items-center"><span class="w-1.5 h-1.5 rounded-full bg-blue-500 mr-1.5"></span>Grounded RAG</span>
+              <span class="text-slate-400">Online</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar Sign Out Action -->
+        <button type="button" onclick="handleLogout()" class="w-full mt-3 py-2 px-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-semibold flex items-center justify-center space-x-2 border border-red-200 transition cursor-pointer">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          <span>Sign Out of Cadre</span>
+        </button>
+
+      </div>
+    </aside>
+
+    <!-- VIEWPORT CONTENT AREA -->
+    <main class="flex-1 min-w-0" id="main-content">
+      <!-- Injected Views (Dashboard, Competencies, Gaps, Recommendations, Quizzes, Trainer Studio, Analytics) -->
+    </main>
+
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: COMPETENCY EVIDENCE AUDIT LEDGER -->
+  <!-- ======================================================== -->
+  <div id="evidence-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+        <div>
+          <h3 class="font-bold text-slate-900 text-base" id="evidence-modal-title">Competency Evidence Audit Trail</h3>
+          <p class="text-xs text-slate-500" id="evidence-modal-sub">Multi-source verification ledger</p>
+        </div>
+        <button onclick="closeEvidenceModal()" class="text-slate-400 hover:text-slate-700 p-1 rounded">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="p-6 overflow-y-auto space-y-4" id="evidence-modal-body">
+        <!-- Rendered via JS -->
+      </div>
+      <div class="px-6 py-3 border-t border-slate-100 bg-slate-50 text-right">
+        <button onclick="closeEvidenceModal()" class="px-4 py-2 bg-govNavy-800 text-white rounded-lg text-xs font-semibold hover:bg-govNavy-700 transition">Close Ledger</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: QUIZ / ASSESSMENT RUNNER -->
+  <!-- ======================================================== -->
+  <div id="quiz-modal" class="hidden fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+      
+      <!-- Quiz Header -->
+      <div class="px-6 py-4 bg-govNavy-800 text-white flex justify-between items-center">
+        <div>
+          <span class="text-[10px] uppercase font-bold tracking-wider bg-govNavy-700 px-2 py-0.5 rounded text-saffron-500">Official Assessment</span>
+          <h3 class="font-bold text-base mt-1" id="quiz-title">National Statistical System Competency Assessment</h3>
+        </div>
+        <div class="flex items-center space-x-3">
+          <div class="bg-govNavy-900/80 px-3 py-1.5 rounded-lg border border-govNavy-700 flex items-center space-x-2 text-xs font-mono">
+            <i data-lucide="clock" class="w-4 h-4 text-saffron-500"></i>
+            <span id="quiz-timer">14:52</span>
+          </div>
+          <button onclick="closeQuizModal()" class="text-slate-300 hover:text-white p-1">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quiz Body / Interactive Steps -->
+      <div class="p-6 overflow-y-auto flex-1" id="quiz-body">
+        <!-- Dynamic questions rendered via JS -->
+      </div>
+
+      <!-- Quiz Footer -->
+      <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-between items-center" id="quiz-footer">
+        <!-- Next / Submit controls -->
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: iGOT KARMAYOGI COURSE PLAYER & SYLLABUS VIEWER -->
+  <!-- ======================================================== -->
+  <div id="igot-player-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      
+      <!-- iGOT Header -->
+      <div class="px-6 py-4 bg-gradient-to-r from-govNavy-900 via-govNavy-800 to-slate-900 text-white flex justify-between items-center border-b border-slate-700">
+        <div class="flex items-center space-x-3">
+          <div class="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center text-amber-400 font-black text-sm border border-white/15">
+            iGOT
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">
+                Mission Karmayogi Bharat • MoSPI Portal
+              </span>
+              <span class="text-[10px] text-emerald-400 font-semibold flex items-center space-x-1">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>API Gateway Active</span>
+              </span>
+            </div>
+            <h3 class="font-bold text-base mt-0.5 text-white" id="igot-modal-course-title">Course Title</h3>
+          </div>
+        </div>
+        <div class="flex items-center space-x-2">
+          <a id="igot-modal-external-link" href="https://igotkarmayogi.gov.in" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition flex items-center space-x-1 shadow-sm">
+            <span>Open live iGOT Portal</span>
+            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+          </a>
+          <button onclick="closeIGOTPlayerModal()" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- iGOT Course Content Body -->
+      <div class="p-6 overflow-y-auto flex-1 space-y-6 bg-slate-50" id="igot-modal-body">
+        <!-- Injected via JavaScript -->
+      </div>
+
+      <!-- iGOT Footer -->
+      <div class="px-6 py-3 bg-white border-t border-slate-200 flex flex-wrap justify-between items-center gap-2" id="igot-modal-footer">
+        <div class="flex items-center space-x-2 text-xs text-slate-500">
+          <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i>
+          <span>Official National Capacity Building Course • Ministry of Statistics and Programme Implementation</span>
+        </div>
+        <div class="flex items-center space-x-2" id="igot-modal-action-buttons">
+          <!-- Enroll / Launch buttons -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- SLIDE-OVER DRAWER: AI SKILL COPILOT -->
+  <!-- ======================================================== -->
+  <div id="ai-drawer" class="hidden fixed inset-y-0 right-0 z-50 w-full sm:w-96 bg-white shadow-2xl border-l border-slate-200 flex flex-col">
+    <!-- Drawer Header -->
+    <div class="p-4 bg-govNavy-900 text-white flex justify-between items-center">
+      <div class="flex items-center space-x-2">
+        <div class="w-8 h-8 rounded-lg bg-govNavy-800 flex items-center justify-center text-saffron-500 border border-govNavy-700">
+          <i data-lucide="sparkles" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h3 class="text-sm font-bold">Statistical Cadre Copilot</h3>
+          <p class="text-[10px] text-slate-400">Grounded in MoSPI Competencies & iGOT</p>
+        </div>
+      </div>
+      <button onclick="toggleAIAssistant()" class="text-slate-400 hover:text-white">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <!-- Suggested Quick Prompts -->
+    <div class="p-3 bg-slate-100 border-b border-slate-200 text-xs">
+      <p class="text-[11px] font-semibold text-slate-500 mb-1.5">Suggested Queries:</p>
+      <div class="flex flex-wrap gap-1.5">
+        <button onclick="sendQuickPrompt('Show my top skill gaps')" class="bg-white hover:bg-slate-50 px-2 py-1 rounded border border-slate-200 text-[11px] font-medium text-slate-700 transition">Top Gaps</button>
+        <button onclick="sendQuickPrompt('Why was Python recommended?')" class="bg-white hover:bg-slate-50 px-2 py-1 rounded border border-slate-200 text-[11px] font-medium text-slate-700 transition">Why Python?</button>
+        <button onclick="sendQuickPrompt('Explain Stratified Sampling')" class="bg-white hover:bg-slate-50 px-2 py-1 rounded border border-slate-200 text-[11px] font-medium text-slate-700 transition">Stratified Sampling</button>
+        <button onclick="sendQuickPrompt('What should I learn next?')" class="bg-white hover:bg-slate-50 px-2 py-1 rounded border border-slate-200 text-[11px] font-medium text-slate-700 transition">Next Step</button>
+      </div>
+    </div>
+
+    <!-- Messages Container -->
+    <div class="flex-1 p-4 overflow-y-auto space-y-3 text-xs" id="chat-messages">
+      <!-- Rendered via JS -->
+    </div>
+
+    <!-- Input Bar -->
+    <div class="p-3 border-t border-slate-200 bg-white">
+      <form onsubmit="handleChatSubmit(event)" class="flex items-center space-x-2">
+        <input type="text" id="chat-input" placeholder="Ask about competencies, courses, or concepts..." class="flex-1 px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-govNavy-700">
+        <button type="submit" class="p-2 bg-govNavy-800 text-white rounded-lg hover:bg-govNavy-700 transition">
+          <i data-lucide="send" class="w-4 h-4"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 hidden bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl border border-slate-700 text-xs flex items-center space-x-3 transition-all duration-300">
+    <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
+    <span id="toast-message">Action completed successfully.</span>
+  </div>
+
+  <!-- Application Logic with cache busting -->
+  <script src="/static/app.js?v=3.8.0"></script>
+</body>
+</html>
