@@ -310,8 +310,9 @@ class AICourseRecommender:
 
     @classmethod
     def _call_gemini_api(cls, api_key: str, current_role: str, target_role: str, readiness_pct: float, competency_deltas: List[Dict], top_courses: List[Dict]) -> Optional[Dict[str, Any]]:
-        """Direct REST call to Google Gemini 1.5 Flash."""
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        """Direct REST call to Google Gemini."""
+        model = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
         prompt = f"""
 You are the Chief AI Learning Architect for India's Official Statistical System (MoSPI / NSSTA / iGOT Karmayogi).
 An officer is planning their career progression:

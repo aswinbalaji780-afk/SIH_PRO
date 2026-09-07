@@ -18,7 +18,7 @@ const i18n = {
     "nav.skillGaps": "Skill Gap Analysis",
     "nav.learningPaths": "Personalized Pathways",
     "nav.courses": "iGOT / NSSTA Catalogue",
-    "nav.assessments": "Assessments & Quizzes",
+    "nav.assessments": "RAG Multi-Level Exam",
     "nav.mcqExam": "AI Multi-Level Exam (NSSTA)",
     "nav.trainerStudio": "Trainer RAG Studio",
     "nav.analytics": "Workforce Analytics",
@@ -46,7 +46,7 @@ const i18n = {
     "nav.skillGaps": "कौशल अंतर विश्लेषण",
     "nav.learningPaths": "व्यक्तिगत शिक्षण मार्ग",
     "nav.courses": "आईगॉट / एनएसएसटीए पाठ्यक्रम",
-    "nav.assessments": "मूल्यांकन एवं प्रश्नोत्तरी",
+    "nav.assessments": "आरएजी बहु-स्तरीय परीक्षा",
     "nav.mcqExam": "एआई बहु-स्तरीय परीक्षा (एनएसएसटीए)",
     "nav.trainerStudio": "प्रशिक्षक आरएजी स्टूडियो",
     "nav.analytics": "कार्यबल विश्लेषिकी",
@@ -875,14 +875,12 @@ function getRoleNavItems(role) {
       { id: 'competencies', label: t('nav.competencies'), icon: 'check-circle' },
       { id: 'skill_gaps', label: t('nav.skillGaps'), icon: 'git-pull-request' },
       { id: 'learning_paths', label: t('nav.learningPaths'), icon: 'map' },
-      { id: 'courses', label: t('nav.courses'), icon: 'book-open' },
-      { id: 'assessments', label: t('nav.assessments'), icon: 'check-square' }
+      { id: 'courses', label: t('nav.courses'), icon: 'book-open' }
     ];
   } else if (role === 'TRAINER') {
     return [
       { id: 'trainer_studio', label: t('nav.trainerStudio'), icon: 'cpu' },
       { id: 'mcq_test_studio', label: 'AI Multi-Level Studio (RAG)', icon: 'award' },
-      { id: 'assessments', label: 'Question Bank & Quizzes', icon: 'check-square' },
       { id: 'courses', label: 'Course Catalog & Syllabi', icon: 'book-open' },
       { id: 'analytics', label: 'Cadre Training Analytics', icon: 'pie-chart' }
     ];
@@ -892,16 +890,14 @@ function getRoleNavItems(role) {
       { id: 'mcq_test_studio', label: 'AI RAG Multi-Level Exam', icon: 'award' },
       { id: 'competencies', label: 'Cadre Competency Matrix', icon: 'check-circle' },
       { id: 'skill_gaps', label: 'Divisional Skill Gaps', icon: 'git-pull-request' },
-      { id: 'courses', label: 'Department Training Catalog', icon: 'book-open' },
-      { id: 'assessments', label: 'Cadre Assessment Oversight', icon: 'check-square' }
+      { id: 'courses', label: 'Department Training Catalog', icon: 'book-open' }
     ];
   } else if (role === 'SYSTEM_ADMIN') {
     return [
       { id: 'admin', label: t('nav.admin'), icon: 'settings' },
       { id: 'mcq_test_studio', label: 'AI Multi-Level Studio (RAG)', icon: 'award' },
       { id: 'analytics', label: 'System & Platform Telemetry', icon: 'pie-chart' },
-      { id: 'courses', label: 'Course Catalog Registry', icon: 'book-open' },
-      { id: 'assessments', label: 'Assessment Registry', icon: 'check-square' }
+      { id: 'courses', label: 'Course Catalog Registry', icon: 'book-open' }
     ];
   }
   return [
@@ -910,8 +906,7 @@ function getRoleNavItems(role) {
     { id: 'competencies', label: t('nav.competencies'), icon: 'check-circle' },
     { id: 'skill_gaps', label: t('nav.skillGaps'), icon: 'git-pull-request' },
     { id: 'learning_paths', label: t('nav.learningPaths'), icon: 'map' },
-    { id: 'courses', label: t('nav.courses'), icon: 'book-open' },
-    { id: 'assessments', label: t('nav.assessments'), icon: 'check-square' }
+    { id: 'courses', label: t('nav.courses'), icon: 'book-open' }
   ];
 }
 
@@ -965,7 +960,8 @@ async function loadView(viewName) {
     } else if (viewName === 'courses') {
       await renderCoursesView(main);
     } else if (viewName === 'assessments') {
-      await renderAssessmentsView(main);
+      // Legacy assessments removed — redirect to RAG MCQ Exam Studio
+      await renderMCQTestPageView(main);
     } else if (viewName === 'trainer_studio') {
       await renderTrainerStudioView(main);
     } else if (viewName === 'analytics') {
@@ -1051,8 +1047,8 @@ async function renderDashboardView(container) {
           <p class="text-xs text-slate-300 mt-1">${profileRes.designation} • ${profileRes.department_name}</p>
         </div>
         <div class="flex items-center space-x-3">
-          <button onclick="loadView('assessments')" class="px-3.5 py-2 bg-saffron-500 text-govNavy-950 font-semibold rounded-lg text-xs hover:bg-saffron-400 transition shadow">
-            Take Adaptive Assessment
+          <button onclick="loadView('mcq_test_studio')" class="px-3.5 py-2 bg-saffron-500 text-govNavy-950 font-semibold rounded-lg text-xs hover:bg-saffron-400 transition shadow">
+            Take RAG Multi-Level Exam
           </button>
           <button onclick="toggleAIAssistant()" class="px-3.5 py-2 bg-govNavy-700 text-white font-semibold rounded-lg text-xs hover:bg-govNavy-600 transition border border-govNavy-600">
             Consult AI Copilot
@@ -1597,8 +1593,8 @@ async function renderCompetenciesView(container) {
           <h2 class="text-lg font-bold text-govNavy-900">Cadre Competency Profile & Multi-Source Evidence</h2>
           <p class="text-xs text-slate-500">Continuous assessment record grounded in quizzes, practical audits, and course completions</p>
         </div>
-        <button onclick="loadView('assessments')" class="px-3 py-2 bg-govNavy-800 text-white rounded-lg text-xs font-semibold hover:bg-govNavy-700">
-          Take Assessment
+        <button onclick="loadView('mcq_test_studio')" class="px-3 py-2 bg-govNavy-800 text-white rounded-lg text-xs font-semibold hover:bg-govNavy-700">
+          Take RAG Exam
         </button>
       </div>
 
@@ -1794,8 +1790,8 @@ async function renderLearningPathsView(container) {
                 <p class="text-[11px] text-slate-500 mt-1">Expected Cadre Competency Gain: <span class="font-medium text-govNavy-900">${m.gain}</span></p>
               </div>
               ${m.status === 'CURRENT' ? `
-                <button onclick="loadView('assessments')" class="px-3 py-1.5 bg-govNavy-800 text-white rounded-lg text-xs font-semibold hover:bg-govNavy-700 shrink-0">
-                  Assess Now
+                <button onclick="loadView('mcq_test_studio')" class="px-3 py-1.5 bg-govNavy-800 text-white rounded-lg text-xs font-semibold hover:bg-govNavy-700 shrink-0">
+                  Take RAG Exam
                 </button>
               ` : ''}
             </div>
@@ -2818,94 +2814,11 @@ async function onCourseSelectedForRAG(courseId, targetTextareaId = 'generator-gu
 }
 
 // -------------------------------------------------------------
-// 10. VIEW: Assessments & Official RAG Multi-Level Examination Center
+// 10. Legacy assessments removed — all routing goes to RAG MCQ Studio
 // -------------------------------------------------------------
 async function renderAssessmentsView(container) {
-  const [assessments, multilevelQuizzes] = await Promise.all([
-    fetch('/api/v1/assessments').then(r => r.json()).catch(() => []),
-    fetch('/api/v1/mcq/multilevel-quizzes').then(r => r.json()).catch(() => [])
-  ]);
-
-  // RAG Multi-Level Assessments are the Official Main Assessments across the platform
-  const activeQuizzes = (multilevelQuizzes && multilevelQuizzes.length > 0) ? multilevelQuizzes : assessments;
-
-  container.innerHTML = `
-    <div class="space-y-6">
-      <!-- Prominent AI RAG Multi-Level Assessment & Upload Banner -->
-      <div class="gov-card p-6 bg-gradient-to-r from-govNavy-900 via-govNavy-800 to-slate-900 text-white flex flex-col lg:flex-row justify-between items-start lg:items-center gap-5 shadow-xl border-2 border-govNavy-700">
-        <div class="space-y-2">
-          <div class="flex items-center space-x-2">
-            <span class="px-2.5 py-0.5 rounded text-[10px] font-black bg-saffron-500 text-slate-950 uppercase tracking-wider">
-              Official RAG Assessment System
-            </span>
-            <span class="text-xs text-emerald-400 font-semibold flex items-center space-x-1.5">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>Grounded in iGOT Course Curriculum & NSSTA Standards</span>
-            </span>
-          </div>
-          <h3 class="text-lg font-black text-white">National Statistical System Multi-Level Examinations</h3>
-          <p class="text-xs text-slate-300 max-w-2xl leading-relaxed">
-            All assessments are powered by the AI RAG Engine, featuring Level 1 (Foundational), Level 2 (Applied Operational), and Level 3 (Strategic Evaluation) questions with verified citations from official NSSTA Training Manuals & iGOT Course Notes.
-          </p>
-        </div>
-        <div class="flex flex-wrap items-center gap-3 shrink-0">
-          <button onclick="loadView('mcq_test_studio'); setMCQStudioTab('upload_studio');" class="px-4 py-2.5 bg-saffron-500 hover:bg-saffron-400 text-slate-950 font-black text-xs rounded-xl transition flex items-center space-x-2 shadow-md cursor-pointer">
-            <i data-lucide="file-up" class="w-4 h-4"></i>
-            <span>Upload Notes / PDF & Synthesize 🚀</span>
-          </button>
-          <button onclick="loadView('mcq_test_studio'); setMCQStudioTab('exam_runner');" class="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl transition flex items-center space-x-2 border border-white/20 cursor-pointer">
-            <i data-lucide="award" class="w-4 h-4 text-saffron-400"></i>
-            <span>Take Active Multi-Level Exam</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="flex justify-between items-center pt-2">
-        <div>
-          <h2 class="text-lg font-bold text-govNavy-900">Official Cadre Competency Examinations (RAG Grounded)</h2>
-          <p class="text-xs text-slate-500">Evaluates multi-level competencies (Foundational, Applied, Strategic) with instant pedagogical feedback and Evidence Ledger accreditation</p>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        ${activeQuizzes.map((a, idx) => `
-          <div class="gov-card p-6 flex flex-col justify-between space-y-4 border ${idx === 0 ? 'border-emerald-300 ring-1 ring-emerald-200' : 'border-slate-200'}">
-            <div>
-              <div class="flex justify-between items-start">
-                <span class="text-[10px] uppercase font-bold tracking-wider text-saffron-500 bg-govNavy-800 px-2 py-0.5 rounded">
-                  ${idx === 0 ? '★ Official Main Assessment' : 'MoSPI Certified RAG'}
-                </span>
-                <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                  iGOT Grounded
-                </span>
-              </div>
-              <h3 class="font-bold text-sm text-slate-900 mt-2">${a.title}</h3>
-              <p class="text-xs text-slate-500 mt-1">${a.description}</p>
-              
-              <!-- Multi-Level Breakdown Pills -->
-              <div class="grid grid-cols-3 gap-2 mt-3 text-[10px] text-center bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-                <div class="text-blue-800 font-bold">Level 1: Foundational<br><span class="text-xs font-extrabold">${a.level_counts?.['1'] || 4} MCQs</span></div>
-                <div class="text-amber-800 font-bold">Level 2: Applied<br><span class="text-xs font-extrabold">${a.level_counts?.['2'] || 4} MCQs</span></div>
-                <div class="text-purple-800 font-bold">Level 3: Advanced<br><span class="text-xs font-extrabold">${a.level_counts?.['3'] || 4} MCQs</span></div>
-              </div>
-
-              <div class="grid grid-cols-2 gap-2 mt-3 text-[11px] text-slate-600 bg-slate-50 p-3 rounded-lg">
-                <div>Linked Course: <b class="text-slate-800">${a.course_title || 'Official Cadre Curriculum'}</b></div>
-                <div>Target Competency: <b class="text-slate-800">${a.competency_name}</b></div>
-                <div>Passing Threshold: <b class="text-slate-800">${a.passing_score}%</b></div>
-                <div>Allocated Duration: <b class="text-slate-800">${a.duration_minutes || 36} Mins</b></div>
-              </div>
-            </div>
-
-            <button onclick="launchMultiLevelExam(${a.id})" class="w-full py-2.5 bg-govNavy-800 hover:bg-govNavy-700 text-white rounded-lg text-xs font-black transition flex items-center justify-center space-x-2 shadow-md cursor-pointer">
-              <i data-lucide="award" class="w-4 h-4 text-saffron-500"></i>
-              <span>Launch Official Multi-Level Exam (${a.total_questions || 36} MCQs) 🚀</span>
-            </button>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  `;
+  // Old assessment/quiz view removed — redirect to RAG Multi-Level Exam Studio
+  await renderMCQTestPageView(container);
 }
 
 function launchMultiLevelExam(assessmentId) {
@@ -3376,9 +3289,9 @@ function renderTrainerAssessmentPreview() {
           <i data-lucide="play" class="w-3.5 h-3.5 text-saffron-400"></i>
           <span>Preview Live Exam as Officer</span>
         </button>
-        <button onclick="loadView('assessments')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition flex items-center space-x-1.5">
+        <button onclick="loadView('mcq_test_studio')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition flex items-center space-x-1.5">
           <i data-lucide="list-checks" class="w-3.5 h-3.5"></i>
-          <span>View in Main Assessments Catalog</span>
+          <span>View in RAG Exam Studio</span>
         </button>
       </div>
 
@@ -3663,7 +3576,8 @@ async function handleChatSubmit(e) {
   const loadingId = appendChatLoading();
 
   try {
-    const res = await fetch('/api/v1/assistant/chat', {
+    const empId = typeof currentEmployeeId !== 'undefined' ? currentEmployeeId : 1;
+    const res = await fetch(`/api/v1/assistant/chat?employee_id=${empId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: query })

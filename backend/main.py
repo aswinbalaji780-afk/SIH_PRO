@@ -2,7 +2,7 @@ import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 
 from backend.core.config import settings
 from backend.models.database import engine, Base
@@ -48,6 +48,10 @@ def readiness_check():
 @app.get("/liveness")
 def liveness_check():
     return {"status": "alive"}
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return Response(status_code=204)
 
 # Frontend Mount
 frontend_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")

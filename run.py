@@ -6,6 +6,8 @@ MoSPI / NSSTA / iGOT Karmayogi Capacity Building Platform
 import sys
 import socket
 import uvicorn
+from dotenv import load_dotenv
+load_dotenv()
 from backend.core.config import settings
 
 def find_available_port(host: str, start_port: int, max_attempts: int = 20) -> int:
