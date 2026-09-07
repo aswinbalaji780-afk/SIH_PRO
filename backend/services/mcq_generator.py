@@ -948,14 +948,16 @@ class AIMCQGenerator:
                 take_from_file = min(count_per_level, len(extracted_for_level))
                 selected_items.extend(random.sample(extracted_for_level, take_from_file))
 
-            # Supplement from template pool only if more questions are needed
+            # Supplement from template pool prioritizing questions matching the course competency
             needed = count_per_level - len(selected_items)
             if needed > 0 and template_pool:
-                fill_pool = [t for t in template_pool if t not in selected_items]
+                matching_pool = [t for t in template_pool if (competency and t.get("competency_code") == competency.code) and t not in selected_items]
+                non_matching_pool = [t for t in template_pool if t not in selected_items and t not in matching_pool]
+                fill_pool = matching_pool + non_matching_pool
                 if not fill_pool:
                     fill_pool = template_pool
                 take_from_pool = min(needed, len(fill_pool))
-                selected_items.extend(random.sample(fill_pool, take_from_pool))
+                selected_items.extend(fill_pool[:take_from_pool])
 
             for idx, item in enumerate(selected_items):
                 is_from_file = item.get("is_from_uploaded_file", False)

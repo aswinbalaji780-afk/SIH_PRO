@@ -706,6 +706,28 @@ def get_course_igot_preview(course_id: int, db: Session = Depends(get_db)):
         ]
     }
 
+@router.get("/courses/{course_id}/curriculum-notes")
+def get_course_curriculum_notes(course_id: int, db: Session = Depends(get_db)):
+    """
+    Extracts structured iGOT course curriculum and syllabus text for RAG ingestion.
+    """
+    course = db.query(Course).filter(Course.id == course_id).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    details = igot_service.get_course_details(course.course_id or course.title)
+    curriculum_text = igot_service.get_curriculum_text(course.course_id or course.title)
+    return {
+        "course_id": course.id,
+        "title": course.title,
+        "course_code": course.course_id,
+        "provider": course.provider,
+        "category": course.category,
+        "skill_level": course.skill_level,
+        "description": course.description,
+        "syllabus": details.get("syllabus", []) if details else [],
+        "curriculum_text": curriculum_text
+    }
+
 @router.get("/nssta/programmes")
 def get_nssta_programmes():
     return nssta_service.get_programmes()
@@ -839,20 +861,35 @@ def review_question(payload: QuestionReviewRequest, db: Session = Depends(get_db
 # -------------------------------------------------------------
 @router.get("/assessments")
 def get_assessments(db: Session = Depends(get_db)):
-    assessments = db.query(Assessment).all()
+    assessments = db.query(Assessment).order_by(Assessment.is_published.desc(), Assessment.id.desc()).all()
     results = []
     for a in assessments:
+        is_multi = bool(a.level and "Multi-Level" in a.level)
+        level_counts = {1: 0, 2: 0, 3: 0}
+        for q in a.questions:
+            lvl = q.level or 1
+            if lvl in level_counts:
+                level_counts[lvl] += 1
+
         results.append({
             "id": a.id,
             "title": a.title,
             "description": a.description,
+            "level": a.level or "Standard Assessment",
+            "is_multi_level": is_multi,
             "target_level": a.target_level,
-            "level_title": CompetencyEngine.level_to_title(a.target_level),
+            "level_title": "Multi-Level (Levels 1, 2 & 3)" if is_multi else CompetencyEngine.level_to_title(a.target_level),
+            "course_id": a.course_id,
+            "course_title": a.course.title if a.course else "National Statistical System Core Curriculum",
             "duration_minutes": a.duration_minutes,
             "passing_score": a.passing_score,
             "total_questions": len(a.questions),
-            "competency_name": a.competency.name if a.competency else ""
+            "level_counts": level_counts,
+            "competency_name": a.competency.name if a.competency else "Core Statistical Competency",
+            "is_published": a.is_published
         })
+    # Sort multi-level assessments to the top so RAG assessments are the primary assessments
+    results.sort(key=lambda x: (1 if x["is_multi_level"] else 0, x["id"]), reverse=True)
     return results
 
 @router.get("/assessments/{assessment_id}")
@@ -959,23 +996,36 @@ async def parse_document_file(file: UploadFile = File(...)):
 def generate_multilevel_quiz(payload: MultiLevelMCQGenerateRequest, db: Session = Depends(get_db)):
     """
     Generate an AI Multi-Level Exam (Level 1 Foundational, Level 2 Applied, Level 3 Advanced)
-    synthesizing content from the uploaded NSSTA Trainer's Guide and selected Course Notes.
+    synthesizing content automatically extracted from the chosen iGOT Course and optional NSSTA Trainer's Guide.
     """
     mat_id = payload.material_id
-    if not mat_id and payload.guide_content:
-        mat_title = payload.guide_title or "Uploaded NSSTA Trainer Guide"
+    course_obj = None
+    combined_content = payload.guide_content or ""
+
+    # Automatically fetch and inject official iGOT course curriculum notes
+    if payload.course_id:
+        course_obj = db.query(Course).filter(Course.id == payload.course_id).first()
+        if course_obj:
+            igot_curriculum = igot_service.get_curriculum_text(course_obj.course_id or course_obj.title)
+            if combined_content and combined_content.strip() != igot_curriculum.strip():
+                combined_content = f"{igot_curriculum}\n\n=== ADDITIONAL NSSTA TRAINER GUIDE NOTES ===\n{combined_content}"
+            else:
+                combined_content = igot_curriculum
+
+    if not mat_id and combined_content:
+        mat_title = payload.guide_title or (f"iGOT Curriculum Grounding: {course_obj.title}" if course_obj else "NSSTA Cadre Guide")
         material = LearningMaterial(
             title=mat_title,
-            filename="trainer_notes.txt",
+            filename="curriculum_notes.txt",
             file_type="txt",
-            file_size_bytes=len(payload.guide_content.encode("utf-8")),
+            file_size_bytes=len(combined_content.encode("utf-8")),
             uploaded_by_user_id=2,
             status="READY",
-            extracted_text_preview=payload.guide_content[:500]
+            extracted_text_preview=combined_content[:500]
         )
         db.add(material)
         db.flush()
-        DocumentProcessingService.process_text_content(db, material, payload.guide_content)
+        DocumentProcessingService.process_text_content(db, material, combined_content)
         db.commit()
         mat_id = material.id
 
@@ -985,9 +1035,32 @@ def generate_multilevel_quiz(payload: MultiLevelMCQGenerateRequest, db: Session 
         course_id=payload.course_id,
         levels=payload.levels or [1, 2, 3],
         count_per_level=payload.count_per_level or 4,
-        assessment_title=payload.assessment_title
+        assessment_title=payload.assessment_title or (f"AI Multi-Level Assessment: {course_obj.title}" if course_obj else None)
     )
     return quiz
+
+@router.post("/mcq/publish-as-main-assessment")
+def publish_as_main_assessment(payload: dict, db: Session = Depends(get_db)):
+    """
+    Publish an AI RAG Multi-Level Assessment as the Official Main Assessment for a course.
+    """
+    assessment_id = payload.get("assessment_id")
+    if not assessment_id:
+        raise HTTPException(status_code=400, detail="assessment_id is required")
+    a = db.query(Assessment).filter(Assessment.id == assessment_id).first()
+    if not a:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+
+    a.is_published = True
+    a.level = "Multi-Level (Levels 1, 2 & 3) — Official Main Assessment"
+    db.commit()
+
+    return {
+        "status": "SUCCESS",
+        "message": f"'{a.title}' is now published as the Official Main Cadre Assessment across the platform!",
+        "assessment_id": a.id,
+        "course_id": a.course_id
+    }
 
 @router.get("/mcq/multilevel-quizzes")
 def get_multilevel_quizzes(course_id: Optional[int] = None, db: Session = Depends(get_db)):

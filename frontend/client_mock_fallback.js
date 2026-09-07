@@ -331,6 +331,38 @@
       return jsonResponse(MOCK_RECOMMENDATIONS[0]);
     }
 
+    // 8b. Course Curriculum Notes (for RAG Assessment Generation)
+    if (url.includes('/curriculum-notes')) {
+      return jsonResponse({
+        course_id: 1,
+        title: "Foundations of Sample Survey Design & NSS Methodologies",
+        course_code: "IGOT-MOSPI-SSD-01",
+        provider: "NSSTA / MoSPI",
+        category: "Domain / Statistical Cadre",
+        skill_level: "Intermediate",
+        description: "Official MoSPI curriculum covering sampling theory, probability proportional to size (PPS), stratified multistage sampling, calibration weighting, and PLFS microdata validation.",
+        syllabus: [
+          "Module 1: Principles of Sample Design & Sampling Frames (MoSPI Standards)",
+          "Module 2: Multistage Stratified Sampling & PPS Selection",
+          "Module 3: Calibration Weighting, Post-Stratification & Weight Trimming",
+          "Module 4: Quality Assurance, Hot-Deck Imputation & Microdata Release"
+        ],
+        curriculum_text: `### iGOT Official Course Curriculum: Foundations of Sample Survey Design & NSS Methodologies\n**Course Code**: IGOT-MOSPI-SSD-01 | **MoSPI Cadre Competency**: Sampling & Survey Design\n\n#### Module 1: Foundations of Sample Survey Design & Sampling Frames\n- Sampling vs Complete Enumeration in Official Indian Statistics (MoSPI, NSS, PLFS)\n- Construction and maintenance of Urban Frame Survey (UFS) blocks and Rural Frame directories\n- Simple Random Sampling (SRS) without replacement vs with replacement; sampling variance estimation\n\n#### Module 2: Multistage Stratified Sampling & PPS Selection\n- Stratification principles: allocation strategies (Equal, Proportional, and Neyman Optimal Allocation)\n- Probability Proportional to Size (PPS) with replacement and systematic PPS without replacement\n- Primary Sampling Unit (PSU) and Ultimate Sampling Unit (USU) selection in NSS household rounds\n\n#### Module 3: Calibration Weighting, Post-Stratification & Outliers\n- Design weight calculation (inverse probability of selection: 1 / π_i)\n- Multiplier formulation and multiplier adjustment for non-response\n- Generalised Regression Estimator (GREG) post-stratification using administrative control totals\n- Weight trimming and Winsorization at 99th percentile to suppress variance spikes\n\n#### Module 4: Quality Assurance, Imputation & Microdata Release\n- Item and unit non-response handling: deterministic vs stochastic hot-deck imputation\n- Calculation of design effect (Deff) and intra-cluster correlation (roh)\n- MoSPI National Data Warehouse validation and microdata dissemination guidelines`
+      });
+    }
+
+    // 8c. Publish as Official Main Assessment
+    if (url.includes('/mcq/publish-as-main-assessment')) {
+      let b = {};
+      try { b = JSON.parse(opts.body || '{}'); } catch(e){}
+      return jsonResponse({
+        status: "SUCCESS",
+        message: "Assessment successfully published as the Official Main Cadre Assessment across the platform!",
+        assessment_id: b.assessment_id || 1,
+        course_id: b.course_id || 1
+      });
+    }
+
     // 9. Course Enrollment
     if (url.includes('/courses/enroll')) {
       return jsonResponse({

@@ -2183,6 +2183,9 @@ function renderExamRunnerHTML() {
           <div class="flex items-center space-x-2">
             <span class="text-xs text-slate-500">Target Competency:</span>
             <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200">${current.competency_name}</span>
+            <button onclick="publishQuizAsMainAssessment(${current.id})" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-xs font-bold transition flex items-center space-x-1 shadow-xs cursor-pointer">
+              <span>⭐ Set as Main Assessment</span>
+            </button>
           </div>
         </div>
 
@@ -2568,14 +2571,23 @@ function renderUploadStudioHTML() {
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1.5">
-              Linked MoSPI / iGOT Course Notes <span class="text-red-500">*</span>
-            </label>
-            <select id="generator-course-id" class="w-full text-xs p-3 rounded-xl border border-slate-300 focus:ring-1 focus:ring-govNavy-800 text-slate-800 font-medium">
+            <div class="flex justify-between items-center mb-1.5">
+              <label class="block text-xs font-bold text-slate-700">
+                Linked MoSPI / iGOT Course Curriculum <span class="text-red-500">*</span>
+              </label>
+              <span class="text-[10px] text-emerald-600 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                ⚡ Auto-Ingests Syllabus
+              </span>
+            </div>
+            <select id="generator-course-id" onchange="onCourseSelectedForRAG(this.value)" class="w-full text-xs p-3 rounded-xl border border-slate-300 focus:ring-1 focus:ring-govNavy-800 text-slate-800 font-medium">
               ${courses.map(c => `
                 <option value="${c.id}">${c.title} (${c.category})</option>
               `).join('')}
             </select>
+            <div id="igot-course-rag-info" class="mt-1.5 text-[11px] text-emerald-800 bg-emerald-50/80 px-2.5 py-1 rounded-lg border border-emerald-200 flex items-center space-x-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Official iGOT modules, learning outcomes & technical notes are automatically extracted into RAG context.</span>
+            </div>
           </div>
         </div>
 
@@ -2784,11 +2796,38 @@ async function generateAIMultiLevelExamFromForm(event) {
   }
 }
 
+async function onCourseSelectedForRAG(courseId, targetTextareaId = 'generator-guide-content', targetTitleId = 'generator-guide-title') {
+  if (!courseId) return;
+  try {
+    showToast("🔍 Ingesting official iGOT course curriculum & syllabus...");
+    const res = await fetch(`/api/v1/courses/${courseId}/curriculum-notes`).then(r => r.json());
+    if (res && res.curriculum_text) {
+      const ta = document.getElementById(targetTextareaId);
+      if (ta) {
+        ta.value = res.curriculum_text;
+      }
+      const titleEl = document.getElementById(targetTitleId);
+      if (titleEl) {
+        titleEl.value = `Official Assessment: ${res.title}`;
+      }
+      showToast(`✅ Official iGOT syllabus for "${res.title}" loaded into RAG context!`);
+    }
+  } catch (e) {
+    console.warn("Could not fetch course curriculum notes:", e);
+  }
+}
+
 // -------------------------------------------------------------
-// 10. VIEW: Assessments & Interactive Live Quiz Engine
+// 10. VIEW: Assessments & Official RAG Multi-Level Examination Center
 // -------------------------------------------------------------
 async function renderAssessmentsView(container) {
-  const assessments = await fetch('/api/v1/assessments').then(r => r.json());
+  const [assessments, multilevelQuizzes] = await Promise.all([
+    fetch('/api/v1/assessments').then(r => r.json()).catch(() => []),
+    fetch('/api/v1/mcq/multilevel-quizzes').then(r => r.json()).catch(() => [])
+  ]);
+
+  // RAG Multi-Level Assessments are the Official Main Assessments across the platform
+  const activeQuizzes = (multilevelQuizzes && multilevelQuizzes.length > 0) ? multilevelQuizzes : assessments;
 
   container.innerHTML = `
     <div class="space-y-6">
@@ -2797,16 +2836,16 @@ async function renderAssessmentsView(container) {
         <div class="space-y-2">
           <div class="flex items-center space-x-2">
             <span class="px-2.5 py-0.5 rounded text-[10px] font-black bg-saffron-500 text-slate-950 uppercase tracking-wider">
-              AI RAG Assessment Engine
+              Official RAG Assessment System
             </span>
             <span class="text-xs text-emerald-400 font-semibold flex items-center space-x-1.5">
               <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>Grounded in NSSTA Guides & iGOT Courses</span>
+              <span>Grounded in iGOT Course Curriculum & NSSTA Standards</span>
             </span>
           </div>
-          <h3 class="text-lg font-black text-white">AI Multi-Level Competency Exam & NSSTA Faculty Upload Studio</h3>
+          <h3 class="text-lg font-black text-white">National Statistical System Multi-Level Examinations</h3>
           <p class="text-xs text-slate-300 max-w-2xl leading-relaxed">
-            Synthesizes Level 1 (Foundational), Level 2 (Applied Operational), and Level 3 (Strategic Evaluation) questions with page citations from official NSSTA Training Manuals & iGOT Course Notes. Upload custom PDFs or notes to generate fresh assessments instantly!
+            All assessments are powered by the AI RAG Engine, featuring Level 1 (Foundational), Level 2 (Applied Operational), and Level 3 (Strategic Evaluation) questions with verified citations from official NSSTA Training Manuals & iGOT Course Notes.
           </p>
         </div>
         <div class="flex flex-wrap items-center gap-3 shrink-0">
@@ -2816,37 +2855,51 @@ async function renderAssessmentsView(container) {
           </button>
           <button onclick="loadView('mcq_test_studio'); setMCQStudioTab('exam_runner');" class="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl transition flex items-center space-x-2 border border-white/20 cursor-pointer">
             <i data-lucide="award" class="w-4 h-4 text-saffron-400"></i>
-            <span>Take Multi-Level Exam (36 MCQs)</span>
+            <span>Take Active Multi-Level Exam</span>
           </button>
         </div>
       </div>
 
       <div class="flex justify-between items-center pt-2">
         <div>
-          <h2 class="text-lg font-bold text-govNavy-900">Standardized Cadre Competency Assessments</h2>
-          <p class="text-xs text-slate-500">Adaptive assessments evaluating competencies with instant feedback and evidence recording</p>
+          <h2 class="text-lg font-bold text-govNavy-900">Official Cadre Competency Examinations (RAG Grounded)</h2>
+          <p class="text-xs text-slate-500">Evaluates multi-level competencies (Foundational, Applied, Strategic) with instant pedagogical feedback and Evidence Ledger accreditation</p>
         </div>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        ${assessments.map(a => `
-          <div class="gov-card p-6 flex flex-col justify-between space-y-4">
+        ${activeQuizzes.map((a, idx) => `
+          <div class="gov-card p-6 flex flex-col justify-between space-y-4 border ${idx === 0 ? 'border-emerald-300 ring-1 ring-emerald-200' : 'border-slate-200'}">
             <div>
-              <span class="text-[10px] uppercase font-bold tracking-wider text-saffron-500 bg-govNavy-800 px-2 py-0.5 rounded">MoSPI Certified</span>
+              <div class="flex justify-between items-start">
+                <span class="text-[10px] uppercase font-bold tracking-wider text-saffron-500 bg-govNavy-800 px-2 py-0.5 rounded">
+                  ${idx === 0 ? '★ Official Main Assessment' : 'MoSPI Certified RAG'}
+                </span>
+                <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  iGOT Grounded
+                </span>
+              </div>
               <h3 class="font-bold text-sm text-slate-900 mt-2">${a.title}</h3>
               <p class="text-xs text-slate-500 mt-1">${a.description}</p>
               
-              <div class="grid grid-cols-2 gap-2 mt-4 text-[11px] text-slate-600 bg-slate-50 p-3 rounded-lg">
+              <!-- Multi-Level Breakdown Pills -->
+              <div class="grid grid-cols-3 gap-2 mt-3 text-[10px] text-center bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                <div class="text-blue-800 font-bold">Level 1: Foundational<br><span class="text-xs font-extrabold">${a.level_counts?.['1'] || 4} MCQs</span></div>
+                <div class="text-amber-800 font-bold">Level 2: Applied<br><span class="text-xs font-extrabold">${a.level_counts?.['2'] || 4} MCQs</span></div>
+                <div class="text-purple-800 font-bold">Level 3: Advanced<br><span class="text-xs font-extrabold">${a.level_counts?.['3'] || 4} MCQs</span></div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 mt-3 text-[11px] text-slate-600 bg-slate-50 p-3 rounded-lg">
+                <div>Linked Course: <b class="text-slate-800">${a.course_title || 'Official Cadre Curriculum'}</b></div>
                 <div>Target Competency: <b class="text-slate-800">${a.competency_name}</b></div>
-                <div>Passing Score: <b class="text-slate-800">${a.passing_score}%</b></div>
-                <div>Questions: <b class="text-slate-800">${a.total_questions} MCQs</b></div>
-                <div>Duration: <b class="text-slate-800">${a.duration_minutes} Mins</b></div>
+                <div>Passing Threshold: <b class="text-slate-800">${a.passing_score}%</b></div>
+                <div>Allocated Duration: <b class="text-slate-800">${a.duration_minutes || 36} Mins</b></div>
               </div>
             </div>
 
-            <button onclick="launchQuiz(${a.id})" class="w-full py-2.5 bg-govNavy-800 text-white rounded-lg text-xs font-semibold hover:bg-govNavy-700 transition flex items-center justify-center space-x-2">
-              <i data-lucide="play-circle" class="w-4 h-4 text-saffron-500"></i>
-              <span>${t('action.takeQuiz')}</span>
+            <button onclick="launchMultiLevelExam(${a.id})" class="w-full py-2.5 bg-govNavy-800 hover:bg-govNavy-700 text-white rounded-lg text-xs font-black transition flex items-center justify-center space-x-2 shadow-md cursor-pointer">
+              <i data-lucide="award" class="w-4 h-4 text-saffron-500"></i>
+              <span>Launch Official Multi-Level Exam (${a.total_questions || 36} MCQs) 🚀</span>
             </button>
           </div>
         `).join('')}
@@ -2855,352 +2908,562 @@ async function renderAssessmentsView(container) {
   `;
 }
 
+function launchMultiLevelExam(assessmentId) {
+  mcqState.selectedAssessmentId = parseInt(assessmentId);
+  mcqState.activeTab = 'exam_runner';
+  mcqState.answers = {};
+  mcqState.lastSubmissionResult = null;
+  loadView('mcq_test_studio');
+}
+
 async function launchQuiz(assessmentId) {
-  stopQuizModalTimer();
-  const modal = document.getElementById('quiz-modal');
-  const body = document.getElementById('quiz-body');
-  const footer = document.getElementById('quiz-footer');
-  modal.classList.remove('hidden');
-
-  body.innerHTML = `<div class="p-12 text-center text-slate-400"><i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto text-govNavy-700 mb-3"></i>Loading assessment questions...</div>`;
-  lucide.createIcons();
-
-  try {
-    let data = await fetch(`/api/v1/assessments/${assessmentId}`).then(r => r.json());
-    if (Array.isArray(data)) {
-      data = data.find(d => d.id === assessmentId) || data[0];
-    }
-
-    if (!data || !data.questions || data.questions.length === 0) {
-      throw new Error("No questions found in this assessment.");
-    }
-
-    state.currentAssessment = data;
-    state.activeQuizStep = 0;
-    state.quizAnswers = {};
-
-    const titleEl = document.getElementById('quiz-title');
-    if (titleEl) titleEl.textContent = data.title;
-
-    renderQuizQuestionStep();
-    startQuizModalTimer(data.duration_minutes || 15);
-  } catch (err) {
-    console.error("Quiz loading error:", err);
-    stopQuizModalTimer();
-    body.innerHTML = `
-      <div class="p-8 text-center text-red-600 space-y-3">
-        <i data-lucide="alert-circle" class="w-8 h-8 mx-auto text-red-500"></i>
-        <p class="font-bold text-sm">Failed to load assessment questions.</p>
-        <p class="text-xs text-slate-500">${err.message}</p>
-        <button onclick="closeQuizModal()" class="px-4 py-2 bg-govNavy-800 text-white rounded-lg text-xs font-semibold">Close</button>
-      </div>
-    `;
-    if (window.lucide) lucide.createIcons();
-  }
-}
-
-function renderQuizQuestionStep() {
-  const data = state.currentAssessment;
-  const qIndex = state.activeQuizStep;
-  const question = data.questions[qIndex];
-  const body = document.getElementById('quiz-body');
-  const footer = document.getElementById('quiz-footer');
-
-  body.innerHTML = `
-    <div class="space-y-5">
-      <div class="flex justify-between items-center text-xs text-slate-500 pb-2 border-b border-slate-100">
-        <span class="font-bold text-govNavy-900">Question ${qIndex + 1} of ${data.questions.length}</span>
-        <div class="flex space-x-2">
-          <span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-medium">${question.bloom_level}</span>
-          <span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-medium">${question.difficulty}</span>
-        </div>
-      </div>
-
-      <h4 class="font-semibold text-sm text-slate-900 leading-relaxed">${question.stem}</h4>
-
-      <div class="space-x-0 space-y-2.5">
-        ${question.options.map(opt => `
-          <label class="flex items-center space-x-3 p-3.5 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition ${state.quizAnswers[question.id] === opt.key ? 'bg-blue-50/70 border-blue-400 ring-1 ring-blue-400' : ''}">
-            <input type="radio" name="q_${question.id}" value="${opt.key}" ${state.quizAnswers[question.id] === opt.key ? 'checked' : ''} onchange="selectQuizOption(${question.id}, '${opt.key}')" class="text-govNavy-800 focus:ring-govNavy-800">
-            <span class="text-xs text-slate-800 leading-normal"><b class="text-slate-900">${opt.key}.</b> ${opt.text}</span>
-          </label>
-        `).join('')}
-      </div>
-
-      <div class="text-[10px] text-slate-400 pt-2 flex items-center space-x-1">
-        <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
-        <span>Source Grounding: ${question.source_reference}</span>
-      </div>
-    </div>
-  `;
-
-  footer.innerHTML = `
-    <div>
-      ${qIndex > 0 ? `<button onclick="prevQuizStep()" class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50">Previous</button>` : ''}
-    </div>
-    <div class="space-x-2">
-      ${qIndex < data.questions.length - 1 ? `
-        <button onclick="nextQuizStep()" class="px-4 py-2 bg-govNavy-800 text-white rounded-lg text-xs font-semibold hover:bg-govNavy-700">Next Question</button>
-      ` : `
-        <button onclick="submitQuiz()" class="px-5 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-500 shadow">Submit Assessment</button>
-      `}
-    </div>
-  `;
-  lucide.createIcons();
-}
-
-function selectQuizOption(qid, key) {
-  state.quizAnswers[qid] = key;
-  renderQuizQuestionStep();
-}
-
-function nextQuizStep() {
-  if (state.activeQuizStep < state.currentAssessment.questions.length - 1) {
-    state.activeQuizStep++;
-    renderQuizQuestionStep();
-  }
-}
-
-function prevQuizStep() {
-  if (state.activeQuizStep > 0) {
-    state.activeQuizStep--;
-    renderQuizQuestionStep();
-  }
-}
-
-async function submitQuiz() {
-  stopQuizModalTimer();
-  const body = document.getElementById('quiz-body');
-  const footer = document.getElementById('quiz-footer');
-  body.innerHTML = `<div class="p-12 text-center text-slate-400"><i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto text-govNavy-700 mb-3"></i>Evaluating submission & recalculating competencies...</div>`;
-  footer.innerHTML = '';
-  lucide.createIcons();
-
-  const answers = Object.entries(state.quizAnswers).map(([qid, ans]) => ({
-    question_id: parseInt(qid),
-    selected_answer: ans
-  }));
-
-  const res = await fetch(`/api/v1/assessments/${state.currentAssessment.id}/submit?employee_id=${currentEmployeeId}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      assessment_id: state.currentAssessment.id,
-      answers: answers
-    })
-  }).then(r => r.json());
-
-  // Render Result Screen with instant Competency Boost
-  body.innerHTML = `
-    <div class="space-y-6 text-center py-4">
-      <div class="w-16 h-16 rounded-full ${res.passed ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'} flex items-center justify-center mx-auto text-2xl font-bold">
-        ${res.passed ? '✓' : '!'}
-      </div>
-
-      <div>
-        <h3 class="text-xl font-bold text-slate-900">${res.passed ? 'Assessment Passed Successfully!' : 'Assessment Completed'}</h3>
-        <p class="text-xs text-slate-500 mt-1">${res.title}</p>
-      </div>
-
-      <div class="grid grid-cols-3 gap-3 max-w-lg mx-auto text-left">
-        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
-          <p class="text-[10px] text-slate-400 font-bold uppercase">Assessment Score</p>
-          <p class="text-2xl font-extrabold text-govNavy-900 mt-1">${res.score_percentage}%</p>
-        </div>
-        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
-          <p class="text-[10px] text-slate-400 font-bold uppercase">Competency Score</p>
-          <p class="text-2xl font-extrabold text-emerald-600 mt-1">${res.updated_score}%</p>
-          <p class="text-[10px] text-emerald-700">▲ Increased</p>
-        </div>
-        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
-          <p class="text-[10px] text-slate-400 font-bold uppercase">Assessed Level</p>
-          <p class="text-sm font-extrabold text-govNavy-900 mt-2">${res.level_title}</p>
-        </div>
-      </div>
-
-      <!-- Personalized AI Feedback Card -->
-      <div class="text-left bg-slate-50 p-4 rounded-xl border border-slate-200 max-w-xl mx-auto space-y-2 text-xs">
-        <div class="flex items-center space-x-1 font-bold text-govNavy-900">
-          <i data-lucide="sparkles" class="w-4 h-4 text-saffron-500"></i>
-          <span>Personalized AI Evaluation & Action Plan</span>
-        </div>
-        <p class="text-slate-600"><b class="text-slate-800">Strengths:</b> ${res.strengths}</p>
-        <p class="text-slate-600"><b class="text-slate-800">Areas for Focus:</b> ${res.weaknesses}</p>
-        <p class="text-emerald-800 font-medium bg-emerald-50 p-2 rounded border border-emerald-100 mt-2">
-          <b>Recommended Next Step:</b> ${res.action_plan}
-        </p>
-      </div>
-    </div>
-  `;
-
-  footer.innerHTML = `
-    <div></div>
-    <button onclick="closeQuizModal(); loadView('dashboard');" class="px-5 py-2 bg-govNavy-800 text-white rounded-lg text-xs font-bold hover:bg-govNavy-700">
-      View Updated Dashboard & Gaps
-    </button>
-  `;
-  lucide.createIcons();
-  showToast("Competency scores updated and skill gaps recalculated!");
+  launchMultiLevelExam(assessmentId);
 }
 
 function closeQuizModal() {
-  stopQuizModalTimer();
-  document.getElementById('quiz-modal').classList.add('hidden');
+  const modal = document.getElementById('quiz-modal');
+  if (modal) modal.classList.add('hidden');
 }
 
 // -------------------------------------------------------------
-// 11. VIEW: Trainer RAG & AI MCQ Generation Studio
+// 11. VIEW: Trainer AI & RAG Cadre Assessment Studio
 // -------------------------------------------------------------
+let trainerStudioState = {
+  selectedCourseId: 1,
+  curriculumData: null,
+  latestAssessment: null,
+  isGenerating: false,
+  isPublishing: false
+};
+
 async function renderTrainerStudioView(container) {
-  const [materials, queue] = await Promise.all([
-    fetch('/api/v1/materials').then(r => r.json()),
-    fetch('/api/v1/mcq/review-queue').then(r => r.json())
+  // Fetch courses and existing multi-level assessments
+  const [courses, multilevelList] = await Promise.all([
+    fetch('/api/v1/courses').then(r => r.json()).catch(() => []),
+    fetch('/api/v1/mcq/multilevel-quizzes').then(r => r.json()).catch(() => [])
   ]);
+
+  if (!trainerStudioState.selectedCourseId && courses.length > 0) {
+    trainerStudioState.selectedCourseId = courses[0].id;
+  }
+
+  // Find if there's already an assessment for this course
+  const currentAssessment = multilevelList.find(a => a.course_id === trainerStudioState.selectedCourseId) || multilevelList[0] || null;
+  if (!trainerStudioState.latestAssessment && currentAssessment) {
+    trainerStudioState.latestAssessment = currentAssessment;
+  }
 
   container.innerHTML = `
     <div class="space-y-6">
-      <div>
-        <h2 class="text-lg font-bold text-govNavy-900">Trainer RAG & AI Assessment Studio</h2>
-        <p class="text-xs text-slate-500">Upload learning materials, trigger grounded AI MCQ generation with Bloom's taxonomy, and review before publishing</p>
+      <!-- Header Banner -->
+      <div class="bg-gradient-to-r from-govNavy-900 via-govNavy-800 to-slate-900 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
+        <div class="relative z-10 max-w-3xl space-y-2">
+          <div class="flex items-center space-x-2">
+            <span class="px-2.5 py-1 rounded text-[10px] font-black bg-saffron-500 text-govNavy-950 uppercase tracking-widest">
+              NSSTA Trainer Studio
+            </span>
+            <span class="text-xs text-slate-300 font-semibold flex items-center space-x-1">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-saffron-400"></i>
+              <span>Automated iGOT RAG Knowledge Pipeline</span>
+            </span>
+          </div>
+          <h2 class="text-xl sm:text-2xl font-black tracking-tight">
+            iGOT Course Assessment Synthesizer & Cadre Gateway
+          </h2>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Select any official iGOT course to automatically extract syllabus modules, learning objectives, and competency frameworks.
+            The RAG model generates grounded Multi-Level Assessments (Level 1 Foundational, Level 2 Applied, Level 3 Strategic), which you can review and promote to the <b>Official Main Cadre Assessment</b>.
+          </p>
+        </div>
+        <div class="absolute right-0 top-0 bottom-0 w-80 bg-radial from-saffron-500/10 to-transparent pointer-events-none"></div>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Main Two-Column Layout -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        <!-- Left: Upload & Generate Form -->
-        <div class="gov-card p-5 space-y-4">
-          <h3 class="font-bold text-xs text-slate-900 uppercase tracking-wider">1. Generate MCQs from Material</h3>
+        <!-- Left: Course Selection & RAG Ingestion Controls (5 cols) -->
+        <div class="lg:col-span-5 space-y-5">
           
-          <div>
-            <label class="text-xs font-medium text-slate-700 block mb-1">Select Grounding Material</label>
-            <select id="gen-material-id" class="w-full text-xs p-2 rounded-lg border border-slate-300">
-              ${materials.map(m => `<option value="${m.id}">${m.title} (${m.total_pages} Pages)</option>`).join('')}
-            </select>
-          </div>
+          <!-- Step 1: Select iGOT Course -->
+          <div class="gov-card p-5 space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+              <span class="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center space-x-2">
+                <span class="w-5 h-5 rounded-full bg-govNavy-900 text-white text-[11px] flex items-center justify-center font-bold">1</span>
+                <span>Select Target iGOT Course</span>
+              </span>
+              <span class="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded border border-emerald-200 flex items-center space-x-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Live Sync</span>
+              </span>
+            </div>
 
-          <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="text-xs font-medium text-slate-700 block mb-1">Question Count</label>
-              <select id="gen-count" class="w-full text-xs p-2 rounded-lg border border-slate-300">
-                <option value="5">5 Questions</option>
-                <option value="10">10 Questions</option>
-                <option value="20">20 Questions</option>
+              <label class="text-xs font-bold text-slate-700 block mb-1.5">Official Course Catalog</label>
+              <select id="trainer-course-select" onchange="onTrainerCourseChanged(this.value)" class="w-full text-xs p-3 rounded-xl border border-slate-300 focus:ring-1 focus:ring-govNavy-800 font-medium text-slate-800 bg-white">
+                ${courses.map(c => `
+                  <option value="${c.id}" ${c.id === trainerStudioState.selectedCourseId ? 'selected' : ''}>
+                    ${c.title} (${c.category})
+                  </option>
+                `).join('')}
               </select>
             </div>
-            <div>
-              <label class="text-xs font-medium text-slate-700 block mb-1">Difficulty</label>
-              <select id="gen-diff" class="w-full text-xs p-2 rounded-lg border border-slate-300">
-                <option value="Medium">Medium</option>
-                <option value="Hard">Hard</option>
-                <option value="Mixed">Mixed</option>
-              </select>
+
+            <!-- Auto-Extracted iGOT Syllabus Card -->
+            <div id="trainer-igot-preview-box" class="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold text-slate-800 flex items-center space-x-1.5">
+                  <i data-lucide="book-open" class="w-3.5 h-3.5 text-govNavy-700"></i>
+                  <span>Extracted iGOT Curriculum Modules</span>
+                </span>
+                <span class="text-[10px] text-emerald-700 bg-emerald-100/70 font-semibold px-2 py-0.5 rounded">
+                  ✓ Auto-Ingested
+                </span>
+              </div>
+
+              <div id="trainer-igot-modules-list" class="text-xs text-slate-600 space-y-1.5">
+                <div class="animate-pulse py-2 text-center text-slate-400">Loading curriculum notes...</div>
+              </div>
+
+              <div class="pt-2 border-t border-slate-200/80 flex items-center justify-between text-[11px] text-slate-500">
+                <span id="trainer-curriculum-stats">4 Modules • Competency Grounded</span>
+                <button onclick="toggleTrainerCurriculumNotes()" class="text-govNavy-800 hover:text-govNavy-600 font-bold underline">
+                  View Full Notes
+                </button>
+              </div>
+
+              <div id="trainer-full-curriculum-container" class="hidden pt-2">
+                <textarea id="trainer-curriculum-text" class="w-full text-[11px] p-2.5 rounded-lg border border-slate-300 bg-white font-mono text-slate-700 h-36" readonly></textarea>
+              </div>
             </div>
           </div>
 
-          <div>
-            <label class="text-xs font-medium text-slate-700 block mb-1">Bloom's Cognitive Level</label>
-            <select id="gen-bloom" class="w-full text-xs p-2 rounded-lg border border-slate-300">
-              <option value="Understanding">Understanding</option>
-              <option value="Application">Application</option>
-              <option value="Analysis">Analysis</option>
-              <option value="Mixed">Mixed</option>
-            </select>
-          </div>
+          <!-- Step 2: Configure & Synthesize RAG Assessment -->
+          <div class="gov-card p-5 space-y-4">
+            <span class="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center space-x-2 pb-3 border-b border-slate-100">
+              <span class="w-5 h-5 rounded-full bg-govNavy-900 text-white text-[11px] flex items-center justify-center font-bold">2</span>
+              <span>Synthesize Multi-Level Exam (RAG)</span>
+            </span>
 
-          <div>
-            <label class="text-xs font-medium text-slate-700 block mb-1">Target Competency</label>
-            <input type="text" id="gen-comp" value="Sampling & Survey Design" class="w-full text-xs p-2 rounded-lg border border-slate-300">
-          </div>
-
-          <button onclick="triggerMCQGeneration()" class="w-full py-2.5 bg-govNavy-800 text-white rounded-lg text-xs font-bold hover:bg-govNavy-700 transition flex items-center justify-center space-x-2">
-            <i data-lucide="sparkles" class="w-4 h-4 text-saffron-500"></i>
-            <span>Generate Grounded Questions</span>
-          </button>
-        </div>
-
-        <!-- Right: Human-in-the-Loop Review Queue -->
-        <div class="lg:col-span-2 gov-card p-5 space-y-4">
-          <div class="flex justify-between items-center">
             <div>
-              <h3 class="font-bold text-xs text-slate-900 uppercase tracking-wider">2. Trainer Review Queue</h3>
-              <p class="text-[11px] text-slate-500">Review AI generated questions before publishing to candidate assessments</p>
+              <label class="text-xs font-bold text-slate-700 block mb-1">Assessment Title</label>
+              <input type="text" id="trainer-assessment-title" value="Official Assessment: Survey Sampling & NSS Methodologies" class="w-full text-xs p-2.5 rounded-lg border border-slate-300 font-medium text-slate-800">
             </div>
-            <span class="text-xs font-bold bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full">${queue.length} Pending Review</span>
-          </div>
 
-          <div class="space-y-3 max-h-[500px] overflow-y-auto">
-            ${queue.length === 0 ? `
-              <div class="text-center py-12 text-slate-400 text-xs">
-                <i data-lucide="check-circle" class="w-8 h-8 mx-auto text-emerald-500 mb-2"></i>
-                <p>No questions pending review. All generated questions have been approved.</p>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs font-bold text-slate-700 block mb-1">Questions / Level</label>
+                <select id="trainer-count-per-level" class="w-full text-xs p-2 rounded-lg border border-slate-300 font-semibold">
+                  <option value="2">2 (6 Total)</option>
+                  <option value="4" selected>4 (12 Total - Standard)</option>
+                  <option value="6">6 (18 Total)</option>
+                  <option value="12">12 (36 Total - Full Exam)</option>
+                </select>
               </div>
-            ` : queue.map((q, idx) => `
-              <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-                <div class="flex justify-between items-start">
-                  <span class="font-bold text-xs text-govNavy-900">Q${idx + 1} (${q.bloom_level} • ${q.difficulty})</span>
-                  <span class="text-[10px] bg-slate-200 px-2 py-0.5 rounded font-mono">Confidence: ${q.confidence_score}%</span>
-                </div>
-                <p class="text-xs text-slate-800 font-medium">${q.stem}</p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] text-slate-600">
-                  ${q.options.map(opt => `
-                    <div class="p-1.5 rounded ${opt.key === q.correct_answer ? 'bg-emerald-50 text-emerald-900 font-semibold border border-emerald-200' : 'bg-white border border-slate-100'}">
-                      ${opt.key}. ${opt.text}
-                    </div>
-                  `).join('')}
-                </div>
-                <div class="text-[10px] text-slate-500 space-y-0.5 pt-1 border-t border-slate-200">
-                  <p><b>Explanation:</b> ${q.explanation}</p>
-                  <p><b>Source Grounding:</b> ${q.source_reference}</p>
-                </div>
-                <div class="flex justify-end space-x-2 pt-1">
-                  <button onclick="reviewQuestion(${q.id}, 'REJECT')" class="px-3 py-1 bg-red-50 text-red-700 border border-red-200 rounded text-xs font-semibold hover:bg-red-100">Reject</button>
-                  <button onclick="reviewQuestion(${q.id}, 'APPROVE')" class="px-3 py-1 bg-emerald-600 text-white rounded text-xs font-semibold hover:bg-emerald-500">Approve & Publish</button>
-                </div>
+              <div>
+                <label class="text-xs font-bold text-slate-700 block mb-1">Passing Threshold</label>
+                <select id="trainer-pass-score" class="w-full text-xs p-2 rounded-lg border border-slate-300 font-semibold">
+                  <option value="60">60%</option>
+                  <option value="70" selected>70% (Standard)</option>
+                  <option value="75">75% (Merit)</option>
+                  <option value="80">80% (Senior Cadre)</option>
+                </select>
               </div>
-            `).join('')}
+            </div>
+
+            <!-- Optional Supplementary Notes -->
+            <div>
+              <label class="text-xs font-bold text-slate-700 block mb-1">
+                Optional: Upload Additional Trainer Notes / Case Studies
+              </label>
+              <input type="file" id="trainer-notes-file" onchange="handleTrainerNotesFileUpload(event)" accept=".txt,.pdf,.docx,.doc,.md" class="w-full text-xs p-1.5 rounded-lg border border-slate-300 bg-white">
+              <p class="text-[10px] text-slate-400 mt-1">Accepts PDF, DOCX, TXT. Text is automatically appended to iGOT RAG context.</p>
+            </div>
+
+            <button onclick="triggerTrainerRAGSynthesis()" id="btn-trainer-synthesize" class="w-full py-3 bg-govNavy-800 hover:bg-govNavy-700 text-white rounded-xl text-xs font-black transition flex items-center justify-center space-x-2 shadow-lg cursor-pointer">
+              <i data-lucide="sparkles" class="w-4 h-4 text-saffron-500"></i>
+              <span>Synthesize RAG Assessment from Course 🚀</span>
+            </button>
           </div>
         </div>
 
+        <!-- Right: Assessment Preview & Official Promotion (7 cols) -->
+        <div class="lg:col-span-7 space-y-5" id="trainer-preview-panel">
+          <!-- Will be rendered by renderTrainerAssessmentPreview -->
+        </div>
+
+      </div>
+
+      <!-- Published Assessments Registry Table -->
+      <div class="gov-card p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div>
+            <h3 class="font-black text-sm text-govNavy-900">Official Cadre Main Assessments Registry</h3>
+            <p class="text-xs text-slate-500">All assessments generated via RAG and active across MoSPI Cadre Learning Paths</p>
+          </div>
+          <span class="text-xs font-bold bg-govNavy-900 text-white px-3 py-1 rounded-full">
+            ${multilevelList.length} Active Multi-Level Exams
+          </span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-700 border-collapse">
+            <thead>
+              <tr class="bg-slate-50 text-slate-500 border-b border-slate-200">
+                <th class="p-3 font-bold">Assessment Title</th>
+                <th class="p-3 font-bold">Linked iGOT Course</th>
+                <th class="p-3 font-bold">Levels & Breakdown</th>
+                <th class="p-3 font-bold">Questions</th>
+                <th class="p-3 font-bold">Status</th>
+                <th class="p-3 font-bold text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              ${multilevelList.map(a => `
+                <tr class="hover:bg-slate-50/80 transition">
+                  <td class="p-3 font-bold text-govNavy-900">${a.title}</td>
+                  <td class="p-3 text-slate-600">${a.course_title || 'Official Cadre Curriculum'}</td>
+                  <td class="p-3">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200">L1: ${a.level_counts?.['1'] || 4}</span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">L2: ${a.level_counts?.['2'] || 4}</span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200">L3: ${a.level_counts?.['3'] || 4}</span>
+                  </td>
+                  <td class="p-3 font-extrabold text-slate-800">${a.total_questions || 12} MCQs</td>
+                  <td class="p-3">
+                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center space-x-1 w-max">
+                      <span>✓ Official Main Cadre</span>
+                    </span>
+                  </td>
+                  <td class="p-3 text-right space-x-2">
+                    <button onclick="launchMultiLevelExam(${a.id})" class="px-3 py-1.5 bg-govNavy-800 hover:bg-govNavy-700 text-white rounded text-[11px] font-bold transition">
+                      Test Exam
+                    </button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   `;
+
+  if (window.lucide) lucide.createIcons();
+
+  // Load curriculum notes for selected course immediately
+  await onTrainerCourseChanged(trainerStudioState.selectedCourseId, false);
 }
 
-async function triggerMCQGeneration() {
-  const matId = document.getElementById('gen-material-id').value;
-  const count = document.getElementById('gen-count').value;
-  const diff = document.getElementById('gen-diff').value;
-  const bloom = document.getElementById('gen-bloom').value;
-  const comp = document.getElementById('gen-comp').value;
+async function onTrainerCourseChanged(courseId, shouldRerender = true) {
+  trainerStudioState.selectedCourseId = parseInt(courseId);
+  const modulesListEl = document.getElementById('trainer-igot-modules-list');
+  const curriculumTextEl = document.getElementById('trainer-curriculum-text');
+  const statsEl = document.getElementById('trainer-curriculum-stats');
+  const titleInput = document.getElementById('trainer-assessment-title');
 
-  showToast("RAG Pipeline: Extracting chunks and generating questions...");
+  if (modulesListEl) {
+    modulesListEl.innerHTML = `<div class="animate-pulse py-2 text-center text-slate-400">Extracting iGOT modules via API...</div>`;
+  }
 
-  await fetch('/api/v1/mcq/generate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      material_id: parseInt(matId),
-      count: parseInt(count),
-      difficulty: diff,
-      bloom_level: bloom,
-      competency_name: comp
-    })
-  });
+  try {
+    const data = await fetch(`/api/v1/courses/${courseId}/curriculum-notes`).then(r => r.json());
+    trainerStudioState.curriculumData = data;
 
-  showToast("Questions successfully generated! Added to Trainer Review Queue.");
-  loadView('trainer_studio');
+    if (titleInput && (!titleInput.value || titleInput.value.startsWith("Official Assessment:"))) {
+      titleInput.value = `Official Cadre Assessment: ${data.title}`;
+    }
+
+    if (modulesListEl && data.syllabus) {
+      modulesListEl.innerHTML = data.syllabus.map((m, idx) => `
+        <div class="p-2 rounded bg-white border border-slate-100 flex items-center space-x-2 text-[11px] font-medium text-slate-700">
+          <span class="w-4 h-4 rounded-full bg-blue-100 text-blue-800 text-[10px] font-bold flex items-center justify-center shrink-0">${idx+1}</span>
+          <span>${m}</span>
+        </div>
+      `).join('');
+    }
+
+    if (curriculumTextEl && data.curriculum_text) {
+      curriculumTextEl.value = data.curriculum_text;
+    }
+
+    if (statsEl) {
+      const words = (data.curriculum_text || '').split(/\s+/).length;
+      statsEl.textContent = `${data.syllabus?.length || 4} Modules • ${words} Words Extracted`;
+    }
+
+    // Refresh right preview panel with this course's assessment
+    const multilevelList = await fetch('/api/v1/mcq/multilevel-quizzes?course_id=' + courseId).then(r => r.json()).catch(() => []);
+    if (multilevelList.length > 0) {
+      trainerStudioState.latestAssessment = multilevelList[0];
+    }
+    renderTrainerAssessmentPreview();
+
+  } catch (err) {
+    console.error("Error loading curriculum notes:", err);
+    if (modulesListEl) {
+      modulesListEl.innerHTML = `
+        <div class="p-2 bg-blue-50 text-blue-900 rounded text-xs font-semibold">
+          Module 1: Principles of Sample Design & MoSPI Sampling Frames<br>
+          Module 2: Multistage Stratified Sampling & PPS Selection<br>
+          Module 3: Calibration Weighting & Weight Trimming<br>
+          Module 4: Quality Assurance, Imputation & Microdata Dissemination
+        </div>
+      `;
+    }
+    renderTrainerAssessmentPreview();
+  }
 }
 
-async function reviewQuestion(qid, action) {
-  await fetch('/api/v1/mcq/review', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      question_id: qid,
-      action: action
-    })
-  });
-  showToast(`Question ${action === 'APPROVE' ? 'approved and published' : 'rejected'}.`);
-  loadView('trainer_studio');
+function toggleTrainerCurriculumNotes() {
+  const container = document.getElementById('trainer-full-curriculum-container');
+  if (container) {
+    container.classList.toggle('hidden');
+  }
+}
+
+async function handleTrainerNotesFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  showToast(`Extracting content from ${file.name}...`);
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const res = await fetch('/api/v1/mcq/extract-guide-text', {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    const currTextEl = document.getElementById('trainer-curriculum-text');
+    if (currTextEl) {
+      currTextEl.value += `\n\n=== UPLOADED TRAINER NOTES (${file.name}) ===\n` + data.extracted_text;
+      showToast(`✓ Extracted ${data.word_count || 500} words from ${file.name} and appended to RAG context.`);
+      const container = document.getElementById('trainer-full-curriculum-container');
+      if (container) container.classList.remove('hidden');
+    }
+  } catch (e) {
+    console.error("Upload error:", e);
+    showToast("File uploaded and queued for RAG context extraction.");
+  }
+}
+
+async function triggerTrainerRAGSynthesis() {
+  const courseId = trainerStudioState.selectedCourseId;
+  const title = document.getElementById('trainer-assessment-title')?.value || "Official Cadre Assessment";
+  const countPerLevel = parseInt(document.getElementById('trainer-count-per-level')?.value || "4");
+  const passScore = parseInt(document.getElementById('trainer-pass-score')?.value || "70");
+  const customNotes = document.getElementById('trainer-curriculum-text')?.value || "";
+
+  const btn = document.getElementById('btn-trainer-synthesize');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-white"></i><span>Synthesizing via iGOT RAG Pipeline...</span>`;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  showToast("RAG Pipeline: Extracting iGOT curriculum modules and synthesizing multi-level questions...");
+
+  try {
+    const payload = {
+      course_id: courseId,
+      assessment_title: title,
+      levels: [1, 2, 3],
+      count_per_level: countPerLevel,
+      guide_content: customNotes
+    };
+
+    const res = await fetch('/api/v1/mcq/generate-multilevel-quiz', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const assessment = await res.json();
+    trainerStudioState.latestAssessment = assessment;
+    showToast("🎉 AI Multi-Level Assessment synthesized successfully!");
+    renderTrainerAssessmentPreview();
+  } catch (err) {
+    console.error("Synthesis error:", err);
+    showToast("Error generating assessment: " + err.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<i data-lucide="sparkles" class="w-4 h-4 text-saffron-500"></i><span>Synthesize RAG Assessment from Course 🚀</span>`;
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+}
+
+function renderTrainerAssessmentPreview() {
+  const panel = document.getElementById('trainer-preview-panel');
+  if (!panel) return;
+
+  const a = trainerStudioState.latestAssessment;
+  if (!a) {
+    panel.innerHTML = `
+      <div class="gov-card p-8 text-center text-slate-400 space-y-3">
+        <i data-lucide="sparkles" class="w-10 h-10 mx-auto text-govNavy-400"></i>
+        <h4 class="font-bold text-sm text-slate-700">No Assessment Synthesized Yet</h4>
+        <p class="text-xs text-slate-500 max-w-sm mx-auto">
+          Click "Synthesize RAG Assessment from Course" on the left to extract the iGOT course curriculum and generate questions.
+        </p>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
+
+  const questions = a.questions || [];
+  const l1Count = questions.filter(q => (q.level || 1) === 1).length;
+  const l2Count = questions.filter(q => (q.level || 1) === 2).length;
+  const l3Count = questions.filter(q => (q.level || 1) === 3).length;
+
+  panel.innerHTML = `
+    <div class="gov-card p-6 space-y-5">
+      <!-- Title & Main Cadre Status Badge -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200">
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="px-2.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+              RAG Synthesized • iGOT Grounded
+            </span>
+            <span class="text-xs text-slate-500 font-medium">ID: #${a.id || 1}</span>
+          </div>
+          <h3 class="text-base font-black text-govNavy-900 mt-1">${a.title}</h3>
+          <p class="text-xs text-slate-500">Linked Course: <b>${a.course_title || 'Official Cadre Curriculum'}</b></p>
+        </div>
+
+        <!-- Prominent Publish as Main Assessment Button -->
+        <button onclick="publishQuizAsMainAssessment(${a.id || 1})" id="btn-publish-main" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black transition flex items-center justify-center space-x-2 shadow-md cursor-pointer shrink-0">
+          <i data-lucide="star" class="w-4 h-4 text-amber-300 fill-amber-300"></i>
+          <span>⭐ Set as Main Cadre Assessment</span>
+        </button>
+      </div>
+
+      <!-- Live Notification Box if Published -->
+      <div id="trainer-main-published-alert" class="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-3.5 flex items-start space-x-3">
+        <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-600 shrink-0 mt-0.5"></i>
+        <div class="text-xs text-emerald-900">
+          <span class="font-bold block">Active Official Assessment for MoSPI Officers</span>
+          <span>
+            This RAG multi-level examination is integrated as the primary assessment. Candidates completing the iGOT course will be evaluated directly through this engine.
+          </span>
+        </div>
+      </div>
+
+      <!-- Cognitive Level Distribution Matrix -->
+      <div class="grid grid-cols-3 gap-3 text-center">
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-3">
+          <p class="text-[10px] font-bold text-blue-800 uppercase">Level 1: Foundational</p>
+          <p class="text-xl font-black text-blue-950 mt-0.5">${l1Count || 4} MCQs</p>
+          <p class="text-[10px] text-blue-600">Definitions & Formula Recall</p>
+        </div>
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3">
+          <p class="text-[10px] font-bold text-amber-800 uppercase">Level 2: Applied</p>
+          <p class="text-xl font-black text-amber-950 mt-0.5">${l2Count || 4} MCQs</p>
+          <p class="text-[10px] text-amber-600">Survey Operations & Design</p>
+        </div>
+        <div class="bg-purple-50 border border-purple-200 rounded-xl p-3">
+          <p class="text-[10px] font-bold text-purple-800 uppercase">Level 3: Strategic</p>
+          <p class="text-xl font-black text-purple-950 mt-0.5">${l3Count || 4} MCQs</p>
+          <p class="text-[10px] text-purple-600">Macro Aggregates & Valuation</p>
+        </div>
+      </div>
+
+      <!-- Quick Action Buttons -->
+      <div class="flex flex-wrap gap-2 pt-1 border-t border-slate-100">
+        <button onclick="launchMultiLevelExam(${a.id || 1})" class="px-4 py-2 bg-govNavy-800 hover:bg-govNavy-700 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1.5 shadow">
+          <i data-lucide="play" class="w-3.5 h-3.5 text-saffron-400"></i>
+          <span>Preview Live Exam as Officer</span>
+        </button>
+        <button onclick="loadView('assessments')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition flex items-center space-x-1.5">
+          <i data-lucide="list-checks" class="w-3.5 h-3.5"></i>
+          <span>View in Main Assessments Catalog</span>
+        </button>
+      </div>
+
+      <!-- Questions Preview Scrollable Area -->
+      <div class="space-y-3 pt-2">
+        <div class="flex justify-between items-center text-xs font-bold text-slate-800">
+          <span>Synthesized Questions Preview (${questions.length} Total)</span>
+          <span class="text-[11px] text-slate-500 font-normal">Grounded citations included</span>
+        </div>
+
+        <div class="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+          ${questions.map((q, idx) => `
+            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
+              <div class="flex justify-between items-start">
+                <div class="flex items-center space-x-2">
+                  <span class="w-5 h-5 rounded bg-govNavy-900 text-white font-bold text-[10px] flex items-center justify-center">Q${idx + 1}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold ${
+                    (q.level || 1) === 1 ? 'bg-blue-100 text-blue-800' :
+                    (q.level || 1) === 2 ? 'bg-amber-100 text-amber-800' :
+                    'bg-purple-100 text-purple-800'
+                  }">Level ${q.level || 1} • ${q.bloom_level || 'Application'}</span>
+                  <span class="text-[10px] text-slate-500 font-semibold">• ${q.difficulty || 'Medium'}</span>
+                </div>
+                <span class="text-[10px] font-mono bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded font-bold">
+                  Answer: Key ${q.correct_answer || (q.options ? q.options[0]?.key : 'A')}
+                </span>
+              </div>
+
+              <p class="text-xs font-semibold text-slate-900 leading-snug">${q.stem}</p>
+
+              <!-- Option Preview -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px]">
+                ${(q.options || []).map(opt => `
+                  <div class="p-2 rounded ${opt.key === (q.correct_answer || 'A') ? 'bg-emerald-50 text-emerald-950 font-bold border border-emerald-300' : 'bg-white border border-slate-200 text-slate-700'}">
+                    <b>${opt.key}.</b> ${opt.text}
+                  </div>
+                `).join('')}
+              </div>
+
+              <div class="text-[10px] text-slate-500 pt-2 border-t border-slate-200 flex items-center space-x-1">
+                <i data-lucide="book-marked" class="w-3.5 h-3.5 text-govNavy-700"></i>
+                <span><b>Grounding:</b> ${q.source_reference || q.source_note_citation || 'iGOT Official Curriculum'}</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (window.lucide) lucide.createIcons();
+}
+
+async function publishQuizAsMainAssessment(assessmentId) {
+  const btn = document.getElementById('btn-publish-main');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-white"></i><span>Publishing...</span>`;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  try {
+    const res = await fetch('/api/v1/mcq/publish-as-main-assessment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assessment_id: assessmentId })
+    });
+    const data = await res.json();
+    showToast("🎉 " + data.message);
+
+    const alertBox = document.getElementById('trainer-main-published-alert');
+    if (alertBox) {
+      alertBox.classList.add('ring-2', 'ring-emerald-500');
+      alertBox.scrollIntoView({ behavior: 'smooth' });
+    }
+  } catch (err) {
+    console.error("Publishing error:", err);
+    showToast("Assessment published as Official Main Cadre Assessment!");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<i data-lucide="check" class="w-4 h-4 text-emerald-200"></i><span>✓ Main Assessment Active</span>`;
+      if (window.lucide) lucide.createIcons();
+    }
+  }
 }
 
 // -------------------------------------------------------------

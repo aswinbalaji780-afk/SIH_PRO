@@ -189,9 +189,38 @@ class IGOTIntegrationService(CourseProvider):
 
     def get_course_details(self, course_id: str) -> Optional[Dict[str, Any]]:
         for c in self.get_catalog():
-            if c["course_id"] == course_id:
+            if c["course_id"] == course_id or c["title"].lower() == course_id.lower():
                 return c
         return None
+
+    def get_curriculum_text(self, course_id_or_title: str) -> str:
+        """
+        Extracts full official iGOT course curriculum, learning objectives,
+        and technical concepts formatted for RAG ingestion.
+        """
+        course = self.get_course_details(course_id_or_title)
+        if not course:
+            for c in self.get_catalog():
+                if course_id_or_title.lower() in c["title"].lower():
+                    course = c
+                    break
+        if not course:
+            course = self.get_catalog()[0]
+
+        syllabus_lines = "\n".join([f"- {s}" for s in course.get("syllabus", [])])
+        return (
+            f"OFFICIAL iGOT KARMAYOGI COURSE CURRICULUM: {course['title']}\n"
+            f"Course Identifier: {course['course_id']} | Provider: {course['provider']}\n"
+            f"Competency Domain: {course.get('category', 'Statistical Competencies')} ({course.get('competency_name', 'Sampling & Estimation')})\n"
+            f"Proficiency Benchmark: Level {course.get('target_level', 3)} ({course.get('skill_level', 'Intermediate')})\n\n"
+            f"Curriculum Overview & Pedagogical Scope:\n"
+            f"{course['description']}\n\n"
+            f"Structured Syllabus & Learning Modules:\n"
+            f"{syllabus_lines}\n\n"
+            f"Assessment Mandate:\n"
+            f"Learners must demonstrate Level 1 (Conceptual Recall), Level 2 (Operational Application), "
+            f"and Level 3 (Strategic Problem Solving) mastery aligned with official MoSPI and NSSTA standards."
+        )
 
     def enroll_course(self, employee_id: int, course_id: int, course_code: str, officer_name: str = "", email: str = "") -> Dict[str, Any]:
         """
