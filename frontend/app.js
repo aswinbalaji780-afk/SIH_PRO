@@ -871,6 +871,7 @@ function getRoleNavItems(role) {
   if (role === 'EMPLOYEE') {
     return [
       { id: 'dashboard', label: t('nav.dashboard'), icon: 'layout-dashboard' },
+      { id: 'mcq_test_studio', label: 'AI RAG Multi-Level Exam', icon: 'award' },
       { id: 'competencies', label: t('nav.competencies'), icon: 'check-circle' },
       { id: 'skill_gaps', label: t('nav.skillGaps'), icon: 'git-pull-request' },
       { id: 'learning_paths', label: t('nav.learningPaths'), icon: 'map' },
@@ -880,7 +881,7 @@ function getRoleNavItems(role) {
   } else if (role === 'TRAINER') {
     return [
       { id: 'trainer_studio', label: t('nav.trainerStudio'), icon: 'cpu' },
-      { id: 'mcq_test_studio', label: t('nav.mcqExam'), icon: 'award' },
+      { id: 'mcq_test_studio', label: 'AI Multi-Level Studio (RAG)', icon: 'award' },
       { id: 'assessments', label: 'Question Bank & Quizzes', icon: 'check-square' },
       { id: 'courses', label: 'Course Catalog & Syllabi', icon: 'book-open' },
       { id: 'analytics', label: 'Cadre Training Analytics', icon: 'pie-chart' }
@@ -888,6 +889,7 @@ function getRoleNavItems(role) {
   } else if (role === 'DEPT_ADMIN') {
     return [
       { id: 'analytics', label: 'Workforce & Cadre Analytics', icon: 'pie-chart' },
+      { id: 'mcq_test_studio', label: 'AI RAG Multi-Level Exam', icon: 'award' },
       { id: 'competencies', label: 'Cadre Competency Matrix', icon: 'check-circle' },
       { id: 'skill_gaps', label: 'Divisional Skill Gaps', icon: 'git-pull-request' },
       { id: 'courses', label: 'Department Training Catalog', icon: 'book-open' },
@@ -896,6 +898,7 @@ function getRoleNavItems(role) {
   } else if (role === 'SYSTEM_ADMIN') {
     return [
       { id: 'admin', label: t('nav.admin'), icon: 'settings' },
+      { id: 'mcq_test_studio', label: 'AI Multi-Level Studio (RAG)', icon: 'award' },
       { id: 'analytics', label: 'System & Platform Telemetry', icon: 'pie-chart' },
       { id: 'courses', label: 'Course Catalog Registry', icon: 'book-open' },
       { id: 'assessments', label: 'Assessment Registry', icon: 'check-square' }
@@ -903,6 +906,7 @@ function getRoleNavItems(role) {
   }
   return [
     { id: 'dashboard', label: t('nav.dashboard'), icon: 'layout-dashboard' },
+    { id: 'mcq_test_studio', label: 'AI RAG Multi-Level Exam', icon: 'award' },
     { id: 'competencies', label: t('nav.competencies'), icon: 'check-circle' },
     { id: 'skill_gaps', label: t('nav.skillGaps'), icon: 'git-pull-request' },
     { id: 'learning_paths', label: t('nav.learningPaths'), icon: 'map' },
@@ -1403,6 +1407,33 @@ async function renderDashboardView(container) {
           <button onclick="loadView('learning_paths')" class="text-xs font-semibold text-bharatTeal-600 hover:underline mt-1 block">Inspect Milestone Path →</button>
         </div>
 
+      </div>
+
+      <!-- Direct Banner: AI RAG Multi-Level Assessment & Upload Studio -->
+      <div class="gov-card p-5 bg-gradient-to-r from-govNavy-900 via-govNavy-800 to-slate-900 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border border-govNavy-700 shadow-md">
+        <div class="space-y-1">
+          <div class="flex items-center space-x-2">
+            <span class="px-2 py-0.5 rounded text-[10px] font-black bg-saffron-500 text-slate-950 uppercase">RAG Engine Active</span>
+            <span class="text-xs text-emerald-400 font-semibold flex items-center space-x-1">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Level 1, 2 & 3 Adaptive Questions</span>
+            </span>
+          </div>
+          <h3 class="text-base font-bold text-white">AI Multi-Level Assessment Studio & NSSTA Notes Synthesizer</h3>
+          <p class="text-xs text-slate-300 max-w-2xl">
+            Automatically ingest NSSTA Trainer Guides, lecture PDFs, and iGOT course curricula to generate grounded multi-level assessments and update your competency ledger.
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
+          <button onclick="loadView('mcq_test_studio'); setMCQStudioTab('upload_studio');" class="px-3.5 py-2 bg-saffron-500 hover:bg-saffron-400 text-slate-950 font-bold text-xs rounded-lg transition flex items-center space-x-1.5 shadow-sm cursor-pointer">
+            <i data-lucide="file-up" class="w-4 h-4"></i>
+            <span>Upload Guide / PDF</span>
+          </button>
+          <button onclick="loadView('mcq_test_studio'); setMCQStudioTab('exam_runner');" class="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-lg transition flex items-center space-x-1.5 border border-white/20 cursor-pointer">
+            <i data-lucide="play-circle" class="w-4 h-4 text-saffron-400"></i>
+            <span>Take Multi-Level Exam</span>
+          </button>
+        </div>
       </div>
 
       <!-- Main Columns: Gaps & Recommendations -->
@@ -2761,7 +2792,36 @@ async function renderAssessmentsView(container) {
 
   container.innerHTML = `
     <div class="space-y-6">
-      <div class="flex justify-between items-center">
+      <!-- Prominent AI RAG Multi-Level Assessment & Upload Banner -->
+      <div class="gov-card p-6 bg-gradient-to-r from-govNavy-900 via-govNavy-800 to-slate-900 text-white flex flex-col lg:flex-row justify-between items-start lg:items-center gap-5 shadow-xl border-2 border-govNavy-700">
+        <div class="space-y-2">
+          <div class="flex items-center space-x-2">
+            <span class="px-2.5 py-0.5 rounded text-[10px] font-black bg-saffron-500 text-slate-950 uppercase tracking-wider">
+              AI RAG Assessment Engine
+            </span>
+            <span class="text-xs text-emerald-400 font-semibold flex items-center space-x-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Grounded in NSSTA Guides & iGOT Courses</span>
+            </span>
+          </div>
+          <h3 class="text-lg font-black text-white">AI Multi-Level Competency Exam & NSSTA Faculty Upload Studio</h3>
+          <p class="text-xs text-slate-300 max-w-2xl leading-relaxed">
+            Synthesizes Level 1 (Foundational), Level 2 (Applied Operational), and Level 3 (Strategic Evaluation) questions with page citations from official NSSTA Training Manuals & iGOT Course Notes. Upload custom PDFs or notes to generate fresh assessments instantly!
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 shrink-0">
+          <button onclick="loadView('mcq_test_studio'); setMCQStudioTab('upload_studio');" class="px-4 py-2.5 bg-saffron-500 hover:bg-saffron-400 text-slate-950 font-black text-xs rounded-xl transition flex items-center space-x-2 shadow-md cursor-pointer">
+            <i data-lucide="file-up" class="w-4 h-4"></i>
+            <span>Upload Notes / PDF & Synthesize 🚀</span>
+          </button>
+          <button onclick="loadView('mcq_test_studio'); setMCQStudioTab('exam_runner');" class="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl transition flex items-center space-x-2 border border-white/20 cursor-pointer">
+            <i data-lucide="award" class="w-4 h-4 text-saffron-400"></i>
+            <span>Take Multi-Level Exam (36 MCQs)</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="flex justify-between items-center pt-2">
         <div>
           <h2 class="text-lg font-bold text-govNavy-900">Standardized Cadre Competency Assessments</h2>
           <p class="text-xs text-slate-500">Adaptive assessments evaluating competencies with instant feedback and evidence recording</p>

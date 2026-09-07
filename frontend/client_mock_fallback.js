@@ -491,6 +491,90 @@
       });
     }
 
+    // 12a. AI RAG Multi-Level Assessment Synthesis (Faculty Upload Studio)
+    if (url.includes('/mcq/generate-multilevel-quiz')) {
+      let reqBody = {};
+      try { reqBody = typeof init?.body === 'string' ? JSON.parse(init.body) : {}; } catch(e) {}
+      const guideTitle = reqBody.guide_title || "NSSTA Cadre Statistical Training Guide — 2026 Edition";
+      const countPerLevel = reqBody.count_per_level || 2;
+      const targetLevels = reqBody.levels || [1, 2, 3];
+
+      const generatedAssessment = {
+        status: "SUCCESS",
+        assessment_id: Date.now(),
+        title: reqBody.assessment_title || `AI RAG Assessment: ${guideTitle}`,
+        course_title: "Survey Sampling & Multi-Level Official Statistics (iGOT & NSSTA)",
+        competency_name: "Advanced Statistical Methodology & National Accounts",
+        passing_score: 70,
+        duration_minutes: targetLevels.length * countPerLevel * 3,
+        total_questions: targetLevels.length * countPerLevel,
+        questions: [
+          {
+            id: 901,
+            level: 1,
+            bloom_level: "Recall",
+            difficulty: "Easy",
+            source_reference: `${guideTitle} • Ch. 1: Sampling Principles`,
+            source_note_citation: "Directly Extracted from Uploaded NSSTA Notes",
+            stem: "In official sample survey methodology, what is the fundamental operating principle of Probability Proportional to Size (PPS) sampling?",
+            options: [
+              { key: "A", text: "Selection probabilities are directly proportional to an auxiliary measure of unit size (e.g. population or factory turnover)." },
+              { key: "B", text: "Every primary sampling unit has identical selection probability regardless of size." },
+              { key: "C", text: "Only units exceeding a fixed numerical threshold are surveyed." },
+              { key: "D", text: "Sample allocation is determined solely by the interviewer's subjective discretion." }
+            ],
+            correct: "A",
+            explanation: "PPS sampling assigns higher selection probability to larger primary units, drastically lowering sampling variance for aggregate economic and demographic totals."
+          },
+          {
+            id: 902,
+            level: 2,
+            bloom_level: "Application",
+            difficulty: "Medium",
+            source_reference: `${guideTitle} • Ch. 3: Optimal Allocation & Imputation`,
+            source_note_citation: "Directly Extracted from Uploaded NSSTA Notes",
+            stem: "In a nationwide multi-stratum survey where within-stratum standard deviations vary substantially, which allocation method guarantees the minimum estimator variance for a fixed total sample size?",
+            options: [
+              { key: "A", text: "Neyman Optimal Allocation, allocating sample size proportionally to stratum size multiplied by stratum standard deviation (N_h * S_h)." },
+              { key: "B", text: "Equal Sample Allocation distributing identical observation counts across all strata." },
+              { key: "C", text: "Proportional Allocation relying solely on stratum population size (N_h)." },
+              { key: "D", text: "Quota allocation based on field staff availability." }
+            ],
+            correct: "A",
+            explanation: "Neyman Optimal Allocation minimizes estimator variance by accounting for both stratum size and internal stratum variance."
+          },
+          {
+            id: 903,
+            level: 3,
+            bloom_level: "Evaluation",
+            difficulty: "Hard",
+            source_reference: `${guideTitle} • Ch. 5: Double Deflation & Macro-Aggregates`,
+            source_note_citation: "Directly Extracted from Uploaded NSSTA Notes",
+            stem: "In the compilation of Gross Value Added (GVA) at constant prices, why is Double Deflation recognized as superior to Single Indicator Deflation?",
+            options: [
+              { key: "A", text: "It deflates gross output and intermediate consumption separately using specific price indices, avoiding distortions from divergent input-output price trends." },
+              { key: "B", text: "It eliminates the requirement of maintaining an annual supply-use table." },
+              { key: "C", text: "It doubles the measured real growth rate of manufacturing sectors automatically." },
+              { key: "D", text: "It uses only wholesale price index (WPI) for all tertiary service sectors." }
+            ],
+            correct: "A",
+            explanation: "Single deflation creates severe statistical distortions when input prices move differently from output prices. Double deflation correctly isolates genuine real volume change."
+          }
+        ]
+      };
+      return jsonResponse(generatedAssessment);
+    }
+
+    // 12b. File Text Extraction Mock
+    if (url.includes('/mcq/extract-guide-text')) {
+      return jsonResponse({
+        status: "SUCCESS",
+        filename: "uploaded_guide.pdf",
+        text_length: 4280,
+        extracted_text: "NATIONAL STATISTICAL SYSTEMS TRAINING ACADEMY (NSSTA)\nCadre Training Manual & Methodological Notes 2026\n\nModule 1: Principles of Probability Proportional to Size (PPS) Sampling\nModule 2: Modified Laspeyres Consumer Price Index Formulation\nModule 3: Stratified Neyman Allocation & Hot-Deck Imputation\nModule 4: Small Area Estimation using Fay-Herriot EBLUP Models\nModule 5: Double Deflation in System of National Accounts (SNA)"
+      });
+    }
+
     // 13. Single Assessment (by ID or query)
     if (url.match(/\/assessments\/\d+/) || (url.includes('/assessments/') && !url.includes('/submit'))) {
       return jsonResponse(MOCK_ASSESSMENTS[0]);
