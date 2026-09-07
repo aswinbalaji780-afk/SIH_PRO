@@ -57,6 +57,9 @@ if os.path.exists(frontend_dir):
 
     @app.get("/")
     async def serve_index():
+        root_index = os.path.join(os.path.dirname(os.path.dirname(__file__)), "index.html")
+        if os.path.exists(root_index):
+            return FileResponse(root_index)
         index_file = os.path.join(frontend_dir, "index.html")
         if os.path.exists(index_file):
             return FileResponse(index_file)
