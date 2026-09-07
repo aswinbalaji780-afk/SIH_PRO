@@ -2052,7 +2052,7 @@ async function renderMCQTestPageView(container) {
 
   if (window.lucide) lucide.createIcons();
 
-  if (mcqState.activeTab === 'exam_runner' && mcqState.selectedAssessment && !mcqState.lastSubmissionResult) {
+  if (mcqState.activeTab === 'exam_runner' && mcqState.selectedAssessment && mcqState.selectedAssessment.questions && mcqState.selectedAssessment.questions.length > 0 && !mcqState.lastSubmissionResult) {
     startMCQExamTimer(mcqState.selectedAssessment.duration_minutes || 36);
   } else {
     stopMCQExamTimer();
@@ -2796,6 +2796,7 @@ async function renderAssessmentsView(container) {
 }
 
 async function launchQuiz(assessmentId) {
+  stopQuizModalTimer();
   const modal = document.getElementById('quiz-modal');
   const body = document.getElementById('quiz-body');
   const footer = document.getElementById('quiz-footer');
@@ -2804,14 +2805,38 @@ async function launchQuiz(assessmentId) {
   body.innerHTML = `<div class="p-12 text-center text-slate-400"><i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto text-govNavy-700 mb-3"></i>Loading assessment questions...</div>`;
   lucide.createIcons();
 
-  const data = await fetch(`/api/v1/assessments/${assessmentId}`).then(r => r.json());
-  state.currentAssessment = data;
-  state.activeQuizStep = 0;
-  state.quizAnswers = {};
+  try {
+    let data = await fetch(`/api/v1/assessments/${assessmentId}`).then(r => r.json());
+    if (Array.isArray(data)) {
+      data = data.find(d => d.id === assessmentId) || data[0];
+    }
 
-  document.getElementById('quiz-title').textContent = data.title;
-  startQuizModalTimer(data.duration_minutes || 15);
-  renderQuizQuestionStep();
+    if (!data || !data.questions || data.questions.length === 0) {
+      throw new Error("No questions found in this assessment.");
+    }
+
+    state.currentAssessment = data;
+    state.activeQuizStep = 0;
+    state.quizAnswers = {};
+
+    const titleEl = document.getElementById('quiz-title');
+    if (titleEl) titleEl.textContent = data.title;
+
+    renderQuizQuestionStep();
+    startQuizModalTimer(data.duration_minutes || 15);
+  } catch (err) {
+    console.error("Quiz loading error:", err);
+    stopQuizModalTimer();
+    body.innerHTML = `
+      <div class="p-8 text-center text-red-600 space-y-3">
+        <i data-lucide="alert-circle" class="w-8 h-8 mx-auto text-red-500"></i>
+        <p class="font-bold text-sm">Failed to load assessment questions.</p>
+        <p class="text-xs text-slate-500">${err.message}</p>
+        <button onclick="closeQuizModal()" class="px-4 py-2 bg-govNavy-800 text-white rounded-lg text-xs font-semibold">Close</button>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+  }
 }
 
 function renderQuizQuestionStep() {

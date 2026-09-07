@@ -345,21 +345,176 @@
       return jsonResponse(MOCK_COMPETENCIES);
     }
 
-    // 11. Assessments
-    if (url.includes('/assessments')) {
+    // 11. Multi-Level MCQ Quizzes
+    if (url.includes('/mcq/multilevel-quizzes')) {
+      const multiQuizzes = [
+        {
+          id: 1,
+          title: "Multi-Level Assessment: Sampling Design & Price Statistics (NSSTA)",
+          course_title: "Foundations of Sample Survey Design & NSS Methodologies",
+          competency_name: "Sampling & Survey Design",
+          passing_score: 70,
+          duration_minutes: 36,
+          total_questions: 6,
+          questions: [
+            {
+              id: 201,
+              level: 1,
+              bloom_level: "Recall",
+              difficulty: "Easy",
+              source_reference: "NSSTA Guide Section 1.2 — Foundations of PPS",
+              source_note_citation: "NSS Survey Design Module 1",
+              stem: "In official sample survey methodology, what is the fundamental operating principle of Probability Proportional to Size (PPS) sampling?",
+              options: [
+                { key: "A", text: "Selection probabilities are directly proportional to a designated auxiliary measure of unit size (such as village population or factory turnover)." },
+                { key: "B", text: "Every primary sampling unit is assigned an identical and uniform selection probability regardless of size." },
+                { key: "C", text: "Only units exceeding a fixed numerical threshold are surveyed, omitting all smaller units." },
+                { key: "D", text: "Sample allocation is determined solely by the interviewer's subjective field discretion." }
+              ],
+              correct: "A",
+              explanation: "PPS sampling assigns higher selection probabilities to larger primary units, drastically lowering sampling variance for aggregate economic and demographic totals."
+            },
+            {
+              id: 202,
+              level: 1,
+              bloom_level: "Understanding",
+              difficulty: "Easy",
+              source_reference: "NSSTA Guide Section 2.1 — Index Number Principles",
+              source_note_citation: "Price Statistics Compendium",
+              stem: "Which mathematical index formula is primarily utilized as the basis for the headline Consumer Price Index (CPI) in India?",
+              options: [
+                { key: "A", text: "Modified Laspeyres Index using fixed base-period consumption basket weights." },
+                { key: "B", text: "Paasche Index with continuously updating current-period weights." },
+                { key: "C", text: "Fisher Ideal Geometric Mean of unweighted commodity price relatives." },
+                { key: "D", text: "Simple Marshall-Edgeworth arithmetic aggregator without expenditure weights." }
+              ],
+              correct: "A",
+              explanation: "Official CPI compilation employs the modified Laspeyres formula, measuring the cost change over time of an itemized consumption basket fixed at the base year."
+            },
+            {
+              id: 203,
+              level: 2,
+              bloom_level: "Application",
+              difficulty: "Medium",
+              source_reference: "NSSTA Guide Section 3.2 — Non-Sampling Errors & Missing Data",
+              source_note_citation: "PLFS Field Manual Chapter 4",
+              stem: "In the Periodic Labour Force Survey (PLFS), when an enumerated household temporarily refuses to report monthly consumption expenditure, what is the approved statistical procedure?",
+              options: [
+                { key: "A", text: "Hot-deck imputation borrowing values from an identically stratified donor household in the same Primary Sampling Unit (PSU)." },
+                { key: "B", text: "Recording zero expenditure and proceeding with sample computation without adjustment." },
+                { key: "C", text: "Discarding the entire village cluster and re-listing the primary sampling frame." },
+                { key: "D", text: "Estimating expenditure based on national per-capita GDP without regional weighting." }
+              ],
+              correct: "A",
+              explanation: "Official NSS protocol dictates hot-deck donor matching within the same stratum to preserve empirical distributional variance without introducing arbitrary mean shrinkage."
+            },
+            {
+              id: 204,
+              level: 2,
+              bloom_level: "Application",
+              difficulty: "Medium",
+              source_reference: "NSSTA Guide Section 1.5 — Stratification & Neyman Allocation",
+              source_note_citation: "NSS Survey Design Module 2",
+              stem: "Under Neyman Optimal Allocation for stratified sampling, how is sample size allocated across strata?",
+              options: [
+                { key: "A", text: "Directly proportional to the product of stratum size (N_h) and stratum standard deviation (S_h)." },
+                { key: "B", text: "Equally divided among all strata regardless of size or variability." },
+                { key: "C", text: "Inversely proportional to stratum variance to penalize volatile groups." },
+                { key: "D", text: "Allocated strictly based on administrative district boundaries." }
+              ],
+              correct: "A",
+              explanation: "Neyman allocation minimizes the overall variance of the estimator by allocating larger sample fractions to strata that are larger and exhibit higher internal variance."
+            },
+            {
+              id: 205,
+              level: 3,
+              bloom_level: "Analysis",
+              difficulty: "Hard",
+              source_reference: "NSSTA Guide Section 4.3 — Small Area Estimation (SAE)",
+              source_note_citation: "Advanced Statistical Methodology Guide",
+              stem: "When sub-district sample sizes in a national survey yield a Relative Standard Error (RSE) exceeding 20%, which modeling framework is mandated by official guidelines?",
+              options: [
+                { key: "A", text: "Fay-Herriot area-level Empirical Best Linear Unbiased Prediction (EBLUP) borrowing strength from auxiliary administrative records." },
+                { key: "B", text: "Direct unweighted expansion estimators using simple random sampling assumptions." },
+                { key: "C", text: "Arbitrary suppression of all district data without replacement." },
+                { key: "D", text: "Standard Ordinary Least Squares (OLS) regression ignoring survey design weights." }
+              ],
+              correct: "A",
+              explanation: "When direct sample sizes cannot support domain publication (RSE > 20%), Fay-Herriot EBLUP shrinkage models borrow strength from auxiliary registers (GST, Census, Satellite Data)."
+            },
+            {
+              id: 206,
+              level: 3,
+              bloom_level: "Analysis",
+              difficulty: "Hard",
+              source_reference: "NSSTA Guide Section 5.1 — National Accounts Deflation",
+              source_note_citation: "System of National Accounts Handbook",
+              stem: "In the compilation of Gross Value Added (GVA) at constant prices, why is Double Deflation recognized as superior to Single Indicator Deflation?",
+              options: [
+                { key: "A", text: "It deflates gross output and intermediate consumption separately using specific price indices, avoiding distortions from divergent input-output price trends." },
+                { key: "B", text: "It eliminates the requirement of maintaining an annual supply-use table." },
+                { key: "C", text: "It doubles the measured real growth rate of manufacturing sectors automatically." },
+                { key: "D", text: "It uses only wholesale price index (WPI) for all tertiary service sectors." }
+              ],
+              correct: "A",
+              explanation: "Single deflation creates severe statistical distortions when input prices (energy, commodities) move differently from output prices. Double deflation correctly isolates genuine real volume change."
+            }
+          ]
+        }
+      ];
+      return jsonResponse(multiQuizzes);
+    }
+
+    // 12. Multi-Level Exam Submission
+    if (url.includes('/mcq/submit-multilevel-test')) {
+      return jsonResponse({
+        status: "SUCCESS",
+        passed: true,
+        score_percentage: 83.3,
+        total_correct: 5,
+        total_questions: 6,
+        passing_score: 70,
+        competency_gain: "+1 Level (Accredited on Competency Ledger)",
+        level_breakdown: {
+          level_1: { correct: 2, total: 2, score_pct: 100 },
+          level_2: { correct: 2, total: 2, score_pct: 100 },
+          level_3: { correct: 1, total: 2, score_pct: 50 }
+        },
+        detailed_feedback: [
+          { question_id: 201, is_correct: true, correct_answer: "A", explanation: "PPS allocates probability proportional to size, lowering aggregate variance." },
+          { question_id: 202, is_correct: true, correct_answer: "A", explanation: "Official CPI is compiled via Modified Laspeyres formula with base basket weights." },
+          { question_id: 203, is_correct: true, correct_answer: "A", explanation: "Hot-deck imputation in the same stratum prevents sample distortion." },
+          { question_id: 204, is_correct: true, correct_answer: "A", explanation: "Neyman allocation distributes proportional to N_h * S_h." },
+          { question_id: 205, is_correct: true, correct_answer: "A", explanation: "Fay-Herriot EBLUP borrows auxiliary strength when domain sample RSE is high." },
+          { question_id: 206, is_correct: false, correct_answer: "A", explanation: "Double deflation separately deflates output and intermediate inputs to preserve real value added." }
+        ]
+      });
+    }
+
+    // 13. Single Assessment (by ID or query)
+    if (url.match(/\/assessments\/\d+/) || (url.includes('/assessments/') && !url.includes('/submit'))) {
+      return jsonResponse(MOCK_ASSESSMENTS[0]);
+    }
+
+    // 14. Assessments List
+    if (url.includes('/assessments') && !url.includes('/submit')) {
       return jsonResponse(MOCK_ASSESSMENTS);
     }
 
-    // 12. Assessment Submission
-    if (url.includes('/assessments/submit')) {
+    // 15. Assessment Submission
+    if (url.includes('/assessments/submit') || url.includes('/assessments/') && url.includes('/submit')) {
       return jsonResponse({
         status: 'PASSED',
-        score_pct: 85.0,
+        score_percentage: 85.0,
+        updated_score: 82.0,
+        level_title: 'Level 3 — Operational Practitioner',
+        title: 'Diagnostic Assessment Passed',
         correct_count: 4,
         total_questions: 5,
         passed: true,
-        competency_increment: '+1 Level (Promotional Point Credited)',
-        message: 'Outstanding performance! Competency Ledger updated with tamper-evident audit hash.'
+        strengths: 'Strong grasp of Probability Proportional to Size (PPS) and Modified Laspeyres Index principles.',
+        weaknesses: 'Review double deflation principles in National Accounts compilation.',
+        action_plan: 'Enroll in Module 3 of the NSSTA National Accounts Compendium on iGOT Karmayogi.'
       });
     }
 
