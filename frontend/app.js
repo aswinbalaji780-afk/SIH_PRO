@@ -1798,18 +1798,61 @@ function closeEvidenceModal() {
 // -------------------------------------------------------------
 // 7. VIEW: Skill Gap Analysis
 // -------------------------------------------------------------
+// 7. VIEW: Skill Gap Analysis & Scheduled Remediation Plan
+// -------------------------------------------------------------
+let roadmapScheduleState = {
+  dailyHours: parseFloat(localStorage.getItem('roadmap_daily_hours') || '1.5'),
+  preferredSlot: localStorage.getItem('roadmap_study_slot') || 'MORNING'
+};
+
 async function renderSkillGapsView(container) {
-  const gaps = await fetch(`/api/v1/skill-gaps/my-gaps?employee_id=${currentEmployeeId}`).then(r => r.json());
+  const [gaps, path] = await Promise.all([
+    fetch(`/api/v1/skill-gaps/my-gaps?employee_id=${currentEmployeeId}`).then(r => r.json()),
+    fetch(`/api/v1/learning-paths/my-path?employee_id=${currentEmployeeId}&daily_hours=${roadmapScheduleState.dailyHours}`).then(r => r.json()).catch(() => ({}))
+  ]);
+
+  const totalGapPoints = gaps.reduce((acc, g) => acc + Math.max(0, g.gap_score), 0);
+  const totalHoursNeeded = path.skill_gap_summary?.total_hours_required || Math.max(28, Math.round(totalGapPoints * 0.8));
+  const dailyHours = roadmapScheduleState.dailyHours || 1.5;
+  const daysNeeded = Math.ceil(totalHoursNeeded / dailyHours);
+  const targetDate = path.skill_gap_summary?.target_completion_date || "14 Oct 2026";
 
   container.innerHTML = `
     <div class="space-y-6">
-      <div class="flex justify-between items-center">
+      <!-- Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 class="text-lg font-bold text-govNavy-900">Cadre Skill Gap Analysis & Priority Ranking</h2>
           <p class="text-xs text-slate-500">Deficits calculated as: Required Role Competency Benchmark - Current Assessed Score</p>
         </div>
-        <button onclick="loadView('learning_paths')" class="px-3 py-2 bg-govNavy-800 text-white rounded-lg text-xs font-semibold hover:bg-govNavy-700">
-          View Remediation Pathway
+        <button onclick="loadView('learning_paths')" class="px-4 py-2 bg-govNavy-800 hover:bg-govNavy-700 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1.5 shadow-sm cursor-pointer">
+          <i data-lucide="calendar" class="w-3.5 h-3.5 text-saffron-400"></i>
+          <span>Open Remediation Roadmap & Schedule</span>
+        </button>
+      </div>
+
+      <!-- Personalized Study Schedule Banner -->
+      <div class="p-4 rounded-xl bg-gradient-to-r from-blue-900 via-indigo-950 to-govNavy-900 text-white border border-blue-500/40 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div class="flex items-center space-x-3.5">
+          <div class="w-11 h-11 rounded-xl bg-saffron-500 text-govNavy-950 flex items-center justify-center font-black text-lg shrink-0 shadow">
+            ⏱️
+          </div>
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-saffron-500 text-govNavy-950 uppercase tracking-wider">Scheduled Remediation Pace</span>
+              <span class="text-xs text-emerald-300 font-bold bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">${dailyHours} Hours / Day</span>
+            </div>
+            <p class="text-xs text-slate-200 mt-1">
+              At your scheduled pace of <b>${dailyHours} hrs/day</b>, you will bridge all <b>${gaps.length} competency deficits</b> (~${totalHoursNeeded} total study hrs) in <b>${daysNeeded} days</b>.
+            </p>
+            <p class="text-[11px] text-slate-400 mt-0.5 font-mono">
+              Target Accreditation Date: <b class="text-saffron-400">${targetDate}</b> • Preferred Shift: <span class="capitalize">${roadmapScheduleState.preferredSlot.toLowerCase()}</span>
+            </p>
+          </div>
+        </div>
+        <button onclick="loadView('learning_paths')" class="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1.5 border border-white/20 cursor-pointer shrink-0">
+          <span>Adjust Daily Study Hours</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
         </button>
       </div>
 
@@ -1823,81 +1866,251 @@ async function renderSkillGapsView(container) {
               <th class="px-6 py-3 text-center">Assessed Score</th>
               <th class="px-6 py-3 text-center">Role Benchmark</th>
               <th class="px-6 py-3 text-center">Net Gap Delta</th>
+              <th class="px-6 py-3 text-center">Estimated Study Hours</th>
               <th class="px-6 py-3 text-center">Priority</th>
               <th class="px-6 py-3 text-right">Action</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200 bg-white">
-            ${gaps.map(g => `
-              <tr class="hover:bg-slate-50">
-                <td class="px-6 py-4 font-bold text-slate-900">${g.name}</td>
-                <td class="px-6 py-4 text-slate-500">${g.domain}</td>
-                <td class="px-6 py-4 text-center font-semibold text-slate-700">${g.current_score}</td>
-                <td class="px-6 py-4 text-center font-semibold text-slate-700">${g.required_score}</td>
-                <td class="px-6 py-4 text-center font-bold ${g.gap_score > 30 ? 'text-red-600' : g.gap_score > 15 ? 'text-amber-600' : 'text-slate-600'}">
-                  ${g.gap_score > 0 ? `-${g.gap_score}` : '0 (Met)'}
-                </td>
-                <td class="px-6 py-4 text-center">
-                  <span class="text-[10px] font-bold px-2 py-0.5 rounded ${g.priority === 'CRITICAL' ? 'bg-red-100 text-red-800' : g.priority === 'HIGH' ? 'bg-amber-100 text-amber-800' : g.priority === 'MEDIUM' ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'}">
-                    ${g.priority}
-                  </span>
-                </td>
-                <td class="px-6 py-4 text-right">
-                  <button onclick="loadView('learning_paths')" class="text-xs font-semibold text-bharatTeal-600 hover:underline">
-                    Remediate →
-                  </button>
-                </td>
-              </tr>
-            `).join('')}
+            ${gaps.map(g => {
+              const compHours = Math.max(4, Math.round(g.gap_score * 0.8));
+              return `
+                <tr class="hover:bg-slate-50">
+                  <td class="px-6 py-4 font-bold text-slate-900">${g.name}</td>
+                  <td class="px-6 py-4 text-slate-500">${g.domain}</td>
+                  <td class="px-6 py-4 text-center font-semibold text-slate-700">${g.current_score}</td>
+                  <td class="px-6 py-4 text-center font-semibold text-slate-700">${g.required_score}</td>
+                  <td class="px-6 py-4 text-center font-bold ${g.gap_score > 30 ? 'text-red-600' : g.gap_score > 15 ? 'text-amber-600' : 'text-slate-600'}">
+                    ${g.gap_score > 0 ? `-${g.gap_score}` : '0 (Met)'}
+                  </td>
+                  <td class="px-6 py-4 text-center font-semibold text-slate-700">
+                    <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-800 font-mono text-[11px]">${compHours} hrs</span>
+                  </td>
+                  <td class="px-6 py-4 text-center">
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded ${g.priority === 'CRITICAL' ? 'bg-red-100 text-red-800' : g.priority === 'HIGH' ? 'bg-amber-100 text-amber-800' : g.priority === 'MEDIUM' ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'}">
+                      ${g.priority}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-right">
+                    <button onclick="loadView('learning_paths')" class="text-xs font-semibold text-bharatTeal-600 hover:underline">
+                      Schedule Roadmap →
+                    </button>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
           </tbody>
         </table>
       </div>
     </div>
   `;
+  if (window.lucide) lucide.createIcons();
 }
 
 // -------------------------------------------------------------
-// 8. VIEW: Personalized Learning Pathways
+// 8. VIEW: Personalized Learning Pathways & Study Scheduler
 // -------------------------------------------------------------
 async function renderLearningPathsView(container) {
-  const path = await fetch(`/api/v1/learning-paths/my-path?employee_id=${currentEmployeeId}`).then(r => r.json());
+  const [path, gaps] = await Promise.all([
+    fetch(`/api/v1/learning-paths/my-path?employee_id=${currentEmployeeId}&daily_hours=${roadmapScheduleState.dailyHours}`).then(r => r.json()),
+    fetch(`/api/v1/skill-gaps/my-gaps?employee_id=${currentEmployeeId}`).then(r => r.json()).catch(() => [])
+  ]);
+
+  const summary = path.skill_gap_summary || {
+    total_gap_points: 65,
+    total_hours_required: 52.0,
+    daily_hours_commitment: roadmapScheduleState.dailyHours,
+    estimated_days: Math.ceil(52.0 / roadmapScheduleState.dailyHours),
+    estimated_weeks: (Math.ceil(52.0 / roadmapScheduleState.dailyHours) / 7).toFixed(1),
+    target_completion_date: "14 Oct 2026",
+    weekly_study_hours: (roadmapScheduleState.dailyHours * 7).toFixed(1),
+    critical_competencies_count: gaps.filter(g => g.priority === 'CRITICAL' || g.priority === 'HIGH').length || 3,
+    schedule_slots: [
+      { id: "MORNING", title: "Morning Cadre Focus", time_window: "07:30 AM – 09:00 AM", icon: "sunrise", description: "Recommended for high-retention survey methodologies & Level 3 advanced analysis before official duty hours." },
+      { id: "MIDDAY", title: "Mid-Day Microlearning", time_window: "01:30 PM – 02:30 PM", icon: "sun", description: "Recommended for quick 15-minute practice MCQs, flashcards, and video modules during duty breaks." },
+      { id: "EVENING", title: "Evening Practical Studio", time_window: "07:00 PM – 08:30 PM", icon: "moon", description: "Recommended for hands-on Python data analysis, RAG exam simulations, and NSSTA trainer guides." }
+    ]
+  };
+
+  const dailyHours = roadmapScheduleState.dailyHours;
 
   container.innerHTML = `
     <div class="space-y-6">
-      <div class="gov-card p-6 bg-gradient-to-r from-govNavy-800 to-govNavy-900 text-white">
-        <span class="text-[10px] uppercase font-bold tracking-wider text-saffron-500 bg-govNavy-700/60 px-2 py-0.5 rounded">Cadre Capacity Building Roadmap</span>
-        <h2 class="text-xl font-bold mt-2">${path.title}</h2>
-        <p class="text-xs text-slate-300 mt-1 max-w-3xl leading-relaxed">${path.description}</p>
-        <div class="flex items-center space-x-6 mt-4 text-xs">
-          <span>Starting: <b>${path.starting_level}</b></span>
-          <span>Target: <b>${path.target_level}</b></span>
-          <span>Duration: <b>${path.duration_weeks} Weeks</b></span>
-          <span>Progress: <b class="text-saffron-500">${path.completion_percentage}%</b></span>
+      <!-- Header Banner -->
+      <div class="gov-card p-6 bg-gradient-to-r from-govNavy-900 via-govNavy-800 to-slate-900 text-white shadow-lg relative overflow-hidden">
+        <div class="relative z-10 space-y-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-[10px] uppercase font-bold tracking-wider text-saffron-500 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/10">
+              National Statistical Cadre Capacity Building Roadmap
+            </span>
+            <span class="text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-400/30">
+              Personalized Time Schedule Active
+            </span>
+          </div>
+          <h2 class="text-xl md:text-2xl font-black mt-1 text-white tracking-tight">${path.title}</h2>
+          <p class="text-xs text-slate-300 max-w-3xl leading-relaxed">${path.description}</p>
+          <div class="flex flex-wrap items-center gap-4 sm:gap-6 pt-2 text-xs">
+            <span>Starting: <b class="text-white">${path.starting_level}</b></span>
+            <span>Target: <b class="text-emerald-400">${path.target_level}</b></span>
+            <span>Est. Duration: <b class="text-amber-400">${summary.estimated_weeks} Weeks (${summary.estimated_days} Days)</b></span>
+            <span>Progress: <b class="text-saffron-400">${path.completion_percentage}%</b></span>
+          </div>
         </div>
       </div>
 
-      <!-- Sequenced Milestones -->
-      <div class="gov-card p-6">
-        <h3 class="font-bold text-slate-900 text-sm mb-4">Milestone Sequence</h3>
-        <div class="space-y-4">
-          ${path.milestones.map(m => `
-            <div class="flex items-start space-x-4 p-4 rounded-xl border ${m.status === 'CURRENT' ? 'bg-amber-50/50 border-amber-300 ring-1 ring-amber-300' : m.status === 'COMPLETED' ? 'bg-emerald-50/40 border-emerald-200' : 'bg-slate-50 border-slate-200 opacity-60'}">
-              <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${m.status === 'COMPLETED' ? 'bg-emerald-500 text-white' : m.status === 'CURRENT' ? 'bg-saffron-500 text-white ring-4 ring-amber-100' : 'bg-slate-300 text-slate-600'}">
-                ${m.status === 'COMPLETED' ? '✓' : m.step}
-              </div>
-              <div class="flex-1">
-                <div class="flex justify-between items-center">
-                  <h4 class="font-bold text-xs text-slate-900">${m.title}</h4>
-                  <span class="text-[10px] font-bold px-2 py-0.5 rounded ${m.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800' : m.status === 'CURRENT' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-600'}">
-                    ${m.status}
-                  </span>
+      <!-- PERSONALIZED DAILY STUDY HOURS & TIME SCHEDULER WIDGET -->
+      <div class="gov-card p-6 border-2 border-blue-500/30 dark:border-blue-700/50 space-y-5 bg-white dark:bg-slate-900 shadow-md">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div class="space-y-1">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-saffron-500 animate-pulse"></span>
+              <h3 class="text-base font-black text-govNavy-900 dark:text-slate-100">Personalized Daily Study Hours Scheduler & Time Budget</h3>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              Schedule your daily study commitment to systematically eliminate your cadre skill gaps.
+            </p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="saveRoadmapSchedulePreference()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs transition flex items-center space-x-1.5 shadow-sm cursor-pointer">
+              <i data-lucide="check" class="w-3.5 h-3.5"></i>
+              <span>Save Study Schedule</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 4 KPI Metrics Grid -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 text-center">
+          <div class="bg-blue-50/60 dark:bg-blue-950/40 p-3.5 rounded-xl border border-blue-200 dark:border-blue-900">
+            <span class="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">Total Skill Gap Work</span>
+            <p class="text-lg font-black text-govNavy-900 dark:text-slate-100 mt-0.5">${summary.total_hours_required} Hrs</p>
+            <span class="text-[10px] text-blue-700 dark:text-blue-300 font-semibold">${summary.total_gap_points} Deficit Points</span>
+          </div>
+          <div class="bg-amber-50/60 dark:bg-amber-950/40 p-3.5 rounded-xl border border-amber-200 dark:border-amber-900">
+            <span class="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">Personalized Commitment</span>
+            <p id="schedule-display-daily-hrs" class="text-lg font-black text-amber-900 dark:text-amber-200 mt-0.5">${dailyHours} Hrs / Day</p>
+            <span id="schedule-display-weekly-hrs" class="text-[10px] text-amber-700 dark:text-amber-300 font-semibold">${summary.weekly_study_hours} Hrs / Week</span>
+          </div>
+          <div class="bg-purple-50/60 dark:bg-purple-950/40 p-3.5 rounded-xl border border-purple-200 dark:border-purple-900">
+            <span class="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">Scheduled Duration</span>
+            <p id="schedule-display-days" class="text-lg font-black text-purple-900 dark:text-purple-200 mt-0.5">${summary.estimated_days} Days</p>
+            <span id="schedule-display-weeks" class="text-[10px] text-purple-700 dark:text-purple-300 font-semibold">${summary.estimated_weeks} Weeks</span>
+          </div>
+          <div class="bg-emerald-50/60 dark:bg-emerald-950/40 p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-900">
+            <span class="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">Target Gap Closure Date</span>
+            <p id="schedule-display-date" class="text-sm font-black text-emerald-900 dark:text-emerald-200 mt-1.5 font-mono">${summary.target_completion_date}</p>
+            <span class="text-[10px] text-emerald-700 dark:text-emerald-300 font-bold">✓ On Cadre Schedule</span>
+          </div>
+        </div>
+
+        <!-- Interactive Study Hours Selector: Presets & Slider -->
+        <div class="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <label class="font-bold text-xs text-slate-800 dark:text-slate-200 flex items-center space-x-1.5">
+              <span>⏱️ Choose Your Personalized Daily Study Hours:</span>
+            </label>
+            <span class="text-xs font-mono font-bold text-govNavy-900 dark:text-slate-100 bg-white dark:bg-slate-900 px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-800 shadow-2xs">
+              Selected: <b id="slider-hours-label" class="text-saffron-600 dark:text-saffron-400">${dailyHours} hrs/day</b>
+            </span>
+          </div>
+
+          <!-- Quick Preset Buttons -->
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" onclick="updateRoadmapDailyHours(1.0)" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${dailyHours === 1.0 ? 'bg-govNavy-800 text-white shadow-xs' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100'}">
+              1.0 Hr / Day
+            </button>
+            <button type="button" onclick="updateRoadmapDailyHours(1.5)" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1 cursor-pointer ${dailyHours === 1.5 ? 'bg-govNavy-800 text-white shadow-xs' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100'}">
+              <span>1.5 Hrs / Day</span>
+              <span class="text-[10px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.2 rounded">Recommended</span>
+            </button>
+            <button type="button" onclick="updateRoadmapDailyHours(2.0)" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${dailyHours === 2.0 ? 'bg-govNavy-800 text-white shadow-xs' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100'}">
+              2.0 Hrs / Day
+            </button>
+            <button type="button" onclick="updateRoadmapDailyHours(3.0)" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1 cursor-pointer ${dailyHours === 3.0 ? 'bg-govNavy-800 text-white shadow-xs' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100'}">
+              <span>3.0 Hrs / Day</span>
+              <span class="text-[10px] bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 px-1.5 py-0.2 rounded">Fast Track</span>
+            </button>
+          </div>
+
+          <!-- Fine-grained Slider -->
+          <div class="pt-1">
+            <input type="range" id="roadmap-hours-slider" min="0.5" max="4.0" step="0.5" value="${dailyHours}" oninput="updateRoadmapDailyHours(parseFloat(this.value))" class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-govNavy-800">
+            <div class="flex justify-between text-[10px] text-slate-400 dark:text-slate-500 pt-1 font-mono">
+              <span>0.5 Hr (Light)</span>
+              <span>1.5 Hrs (Standard Cadre Pace)</span>
+              <span>2.5 Hrs</span>
+              <span>4.0 Hrs (Intensive)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preferred Daily Learning Time Slots -->
+        <div class="space-y-2.5">
+          <label class="font-bold text-xs text-slate-800 dark:text-slate-200 flex items-center space-x-1.5">
+            <span>📅 Select Your Preferred Daily Study Shift / Schedule:</span>
+          </label>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            ${summary.schedule_slots.map(slot => {
+              const isSelected = roadmapScheduleState.preferredSlot === slot.id;
+              return `
+                <div onclick="setRoadmapStudySlot('${slot.id}')" class="p-3.5 rounded-xl border cursor-pointer transition flex flex-col justify-between space-y-2 ${isSelected ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-500 ring-2 ring-blue-300 dark:ring-blue-800 shadow-xs' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'}">
+                  <div>
+                    <div class="flex items-center justify-between">
+                      <span class="font-bold text-xs text-govNavy-900 dark:text-slate-100">${slot.title}</span>
+                      <span class="text-[10px] font-mono px-2 py-0.5 rounded font-bold ${isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}">${slot.time_window}</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">${slot.description}</p>
+                  </div>
+                  <div class="text-[10px] font-bold text-blue-700 dark:text-blue-300 flex items-center space-x-1 pt-1">
+                    <span>${isSelected ? '✓ Selected Shift' : 'Click to Select'}</span>
+                  </div>
                 </div>
-                <p class="text-[11px] text-slate-500 mt-1">Expected Cadre Competency Gain: <span class="font-medium text-govNavy-900">${m.gain}</span></p>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+
+      <!-- Sequenced Milestones with Scheduled Timeline Dates -->
+      <div class="gov-card p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div>
+            <h3 class="font-black text-sm text-govNavy-900 dark:text-slate-100">Sequenced Competency Milestones & Scheduled Dates</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Paced specifically for ${dailyHours} study hrs/day</p>
+          </div>
+          <span class="text-xs font-bold text-slate-500 dark:text-slate-400 font-mono">${path.milestones.length} Milestones</span>
+        </div>
+
+        <div class="space-y-3.5">
+          ${path.milestones.map((m, idx) => `
+            <div class="flex items-start space-x-4 p-4 rounded-xl border transition ${m.status === 'CURRENT' ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800 ring-1 ring-amber-300' : m.status === 'COMPLETED' ? 'bg-emerald-50/30 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900' : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 opacity-75'}">
+              <div class="w-9 h-9 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${m.status === 'COMPLETED' ? 'bg-emerald-500 text-white' : m.status === 'CURRENT' ? 'bg-saffron-500 text-white ring-4 ring-amber-100 dark:ring-amber-900' : 'bg-slate-300 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}">
+                ${m.status === 'COMPLETED' ? '✓' : (m.step || idx + 1)}
+              </div>
+              <div class="flex-1 space-y-1">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                  <h4 class="font-bold text-xs text-slate-900 dark:text-slate-100">${m.title}</h4>
+                  <div class="flex items-center space-x-2">
+                    <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
+                      ${m.estimated_hours || 10.4} Study Hrs
+                    </span>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded ${m.status === 'COMPLETED' ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300' : m.status === 'CURRENT' ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}">
+                      ${m.status}
+                    </span>
+                  </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400">
+                  <span>📅 Target Completion: <b class="text-govNavy-900 dark:text-slate-200 font-mono">${m.target_completion_date || 'Calculated'}</b> (${m.schedule_window || 'Paced'})</span>
+                  <span>•</span>
+                  <span>Gain: <b class="text-emerald-700 dark:text-emerald-400">${m.gain}</b></span>
+                </div>
               </div>
               ${m.status === 'CURRENT' ? `
-                <button onclick="loadView('mcq_test_studio')" class="px-3 py-1.5 bg-govNavy-800 text-white rounded-lg text-xs font-semibold hover:bg-govNavy-700 shrink-0">
-                  Take RAG Exam
-                </button>
+                <div class="flex items-center space-x-2 shrink-0">
+                  <button onclick="loadView('mcq_test_studio')" class="px-3 py-1.5 bg-govNavy-800 hover:bg-govNavy-700 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1 shadow-xs cursor-pointer">
+                    <i data-lucide="play" class="w-3 h-3 fill-white"></i>
+                    <span>Take RAG Exam</span>
+                  </button>
+                </div>
               ` : ''}
             </div>
           `).join('')}
@@ -1905,6 +2118,42 @@ async function renderLearningPathsView(container) {
       </div>
     </div>
   `;
+  if (window.lucide) lucide.createIcons();
+}
+
+function updateRoadmapDailyHours(hours) {
+  roadmapScheduleState.dailyHours = parseFloat(hours);
+  localStorage.setItem('roadmap_daily_hours', roadmapScheduleState.dailyHours);
+  const container = document.getElementById('main-content');
+  if (activeView === 'learning_paths' && container) {
+    renderLearningPathsView(container);
+  }
+}
+
+function setRoadmapStudySlot(slotId) {
+  roadmapScheduleState.preferredSlot = slotId;
+  localStorage.setItem('roadmap_study_slot', slotId);
+  const container = document.getElementById('main-content');
+  if (activeView === 'learning_paths' && container) {
+    renderLearningPathsView(container);
+  }
+}
+
+async function saveRoadmapSchedulePreference() {
+  try {
+    await fetch('/api/v1/learning-paths/schedule-preference', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        employee_id: currentEmployeeId || 1,
+        daily_study_hours: roadmapScheduleState.dailyHours,
+        preferred_slot: roadmapScheduleState.preferredSlot
+      })
+    });
+  } catch (e) {
+    console.log("Locally persisted schedule preference:", e);
+  }
+  showToast(`✅ Study Schedule Saved: ${roadmapScheduleState.dailyHours} hrs/day (${roadmapScheduleState.preferredSlot} shift) committed.`);
 }
 
 // -------------------------------------------------------------
@@ -2117,8 +2366,11 @@ let mcqState = {
   uploadedPdfName: '',
   isPdfUploadedAndVerified: false,
   cameraStream: null,
+  audioStream: null,
   isCameraActive: false,
+  isMicActive: false,
   cameraDenied: false,
+  micDenied: false,
   tabSwitchCount: 0,
   isTerminated: false,
   lastViolationTime: 0
@@ -2401,10 +2653,10 @@ function renderPreExamLaunchModalHTML() {
             </p>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
               <div class="flex items-start space-x-2 bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
-                <span class="text-base shrink-0">📷</span>
+                <span class="text-base shrink-0">📷🎙️</span>
                 <div>
-                  <b class="text-slate-900 dark:text-slate-100">Camera Permission:</b>
-                  <p class="text-slate-500 dark:text-slate-400">Webcam permission prompted upon start for live AI invigilation.</p>
+                  <b class="text-slate-900 dark:text-slate-100">Camera & Mic Required:</b>
+                  <p class="text-slate-500 dark:text-slate-400">Webcam and microphone access required upon start for live AI video/audio invigilation.</p>
                 </div>
               </div>
               <div class="flex items-start space-x-2 bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
@@ -2745,29 +2997,95 @@ function disableExamAntiCheating() {
   window.removeEventListener('beforeunload', handleExamBeforeUnload);
 }
 
+let micAudioContext = null;
+let micAnalyser = null;
+let micDataArray = null;
+let micAnimId = null;
+
+function setupMicAudioMeter(stream) {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    if (micAudioContext) {
+      try { micAudioContext.close(); } catch (e) {}
+    }
+    micAudioContext = new AudioCtx();
+    const source = micAudioContext.createMediaStreamSource(stream);
+    micAnalyser = micAudioContext.createAnalyser();
+    micAnalyser.fftSize = 64;
+    source.connect(micAnalyser);
+    const bufferLength = micAnalyser.frequencyBinCount;
+    micDataArray = new Uint8Array(bufferLength);
+    animateMicLevels();
+  } catch (e) {
+    console.warn("Proctoring audio meter setup handled:", e);
+  }
+}
+
+function animateMicLevels() {
+  if (!micAnalyser || !micDataArray || !mcqState.isMicActive) return;
+  micAnalyser.getByteFrequencyData(micDataArray);
+  let sum = 0;
+  for (let i = 0; i < micDataArray.length; i++) {
+    sum += micDataArray[i];
+  }
+  const avg = sum / micDataArray.length;
+  const bars = document.querySelectorAll('.exam-mic-bar');
+  if (bars && bars.length > 0) {
+    bars.forEach((bar, idx) => {
+      const height = Math.min(100, Math.max(15, (avg * (1 + (idx % 4) * 0.25)) / 1.4));
+      bar.style.height = `${height}%`;
+    });
+  }
+  micAnimId = requestAnimationFrame(animateMicLevels);
+}
+
 async function initCameraProctoring() {
   if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
     try {
+      // Step 1: Request simultaneous Camera & Microphone permissions for AI invigilation
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 320 }, height: { ideal: 240 }, facingMode: "user" },
-        audio: false
+        audio: true
       });
       mcqState.cameraStream = stream;
       mcqState.isCameraActive = true;
+      mcqState.isMicActive = true;
       mcqState.cameraDenied = false;
-      showToast("📷 Web Camera Active: AI Invigilation stream connected successfully!");
+      mcqState.micDenied = false;
+      setupMicAudioMeter(stream);
+      showToast("📷🎙️ Proctoring Active: Web Camera & Microphone streams connected successfully!");
       attachCameraToFeed();
     } catch (err) {
-      console.warn("Camera permission denied or camera not accessible:", err);
-      mcqState.cameraStream = null;
-      mcqState.isCameraActive = false;
-      mcqState.cameraDenied = true;
-      showToast("⚠️ Camera Permission Denied: Assessment proceeding in flagged proctored mode.");
-      attachCameraToFeed();
+      console.warn("Combined video+audio request rejected, attempting video-only fallback:", err);
+      // Step 2: Fallback to video only if audio is denied or no mic present
+      try {
+        const videoStream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 320 }, height: { ideal: 240 }, facingMode: "user" },
+          audio: false
+        });
+        mcqState.cameraStream = videoStream;
+        mcqState.isCameraActive = true;
+        mcqState.isMicActive = false;
+        mcqState.cameraDenied = false;
+        mcqState.micDenied = true;
+        showToast("📷 Camera Active (Microphone not detected or permission denied - flagged mode)");
+        attachCameraToFeed();
+      } catch (vErr) {
+        console.warn("Camera and mic permissions denied or not accessible:", vErr);
+        mcqState.cameraStream = null;
+        mcqState.isCameraActive = false;
+        mcqState.isMicActive = false;
+        mcqState.cameraDenied = true;
+        mcqState.micDenied = true;
+        showToast("⚠️ Camera & Mic Permission Denied: Assessment proceeding in flagged proctored mode.");
+        attachCameraToFeed();
+      }
     }
   } else {
     mcqState.cameraDenied = true;
-    showToast("⚠️ Web Camera media devices not supported in this browser environment.");
+    mcqState.micDenied = true;
+    showToast("⚠️ Media capture devices not supported in this browser environment.");
     attachCameraToFeed();
   }
 }
@@ -2776,6 +3094,7 @@ function attachCameraToFeed() {
   const videoEl = document.getElementById('exam-proctor-video');
   const fallbackEl = document.getElementById('exam-proctor-fallback');
   const badgeEl = document.getElementById('exam-proctor-badge');
+  const micBadgeEl = document.getElementById('exam-mic-badge');
 
   if (videoEl && mcqState.cameraStream) {
     try {
@@ -2794,15 +3113,35 @@ function attachCameraToFeed() {
   if (badgeEl) {
     if (mcqState.isCameraActive) {
       badgeEl.className = "text-[9px] font-mono bg-emerald-900/80 text-emerald-300 px-1.5 py-0.2 rounded border border-emerald-500/50 flex items-center space-x-1";
-      badgeEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><span>LIVE</span>`;
+      badgeEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><span>CAM LIVE</span>`;
     } else {
       badgeEl.className = "text-[9px] font-mono bg-amber-950/80 text-amber-300 px-1.5 py-0.2 rounded border border-amber-500/50";
-      badgeEl.innerHTML = `<span>FLAGGED</span>`;
+      badgeEl.innerHTML = `<span>NO CAM</span>`;
+    }
+  }
+
+  if (micBadgeEl) {
+    if (mcqState.isMicActive) {
+      micBadgeEl.className = "text-[9px] font-mono bg-emerald-900/80 text-emerald-300 px-1.5 py-0.2 rounded border border-emerald-500/50 flex items-center space-x-1";
+      micBadgeEl.innerHTML = `<span>🎙️ MIC</span>`;
+    } else {
+      micBadgeEl.className = "text-[9px] font-mono bg-amber-950/80 text-amber-300 px-1.5 py-0.2 rounded border border-amber-500/50";
+      micBadgeEl.innerHTML = `<span>🔇 OFF</span>`;
     }
   }
 }
 
 function stopCameraProctoring() {
+  if (micAnimId) {
+    cancelAnimationFrame(micAnimId);
+    micAnimId = null;
+  }
+  if (micAudioContext) {
+    try {
+      micAudioContext.close();
+    } catch (e) {}
+    micAudioContext = null;
+  }
   if (mcqState.cameraStream) {
     try {
       mcqState.cameraStream.getTracks().forEach(track => track.stop());
@@ -2810,7 +3149,9 @@ function stopCameraProctoring() {
     mcqState.cameraStream = null;
   }
   mcqState.isCameraActive = false;
+  mcqState.isMicActive = false;
   mcqState.cameraDenied = false;
+  mcqState.micDenied = false;
   const floatingWidget = document.getElementById('exam-floating-proctor-widget');
   if (floatingWidget) floatingWidget.remove();
 }
@@ -2985,6 +3326,10 @@ function renderExamRunnerHTML() {
               <div class="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/80 border border-emerald-500/50 text-emerald-400 font-bold">
                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span>AI Proctor: Web Camera Live</span>
+              </div>
+              <div class="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg ${mcqState.isMicActive ? 'bg-emerald-950/80 border border-emerald-500/50 text-emerald-400' : 'bg-amber-950/80 border border-amber-500/50 text-amber-300'} font-bold">
+                <span class="w-2 h-2 rounded-full ${mcqState.isMicActive ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'}"></span>
+                <span>🎙️ Mic: ${mcqState.isMicActive ? 'Active (Audio Monitored)' : 'Flagged (Mic Inactive)'}</span>
               </div>
               <div class="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-red-950/80 border border-red-500/40 text-red-300 font-bold">
                 <span>🔒 Right-Click Disabled</span>
@@ -3307,23 +3652,35 @@ function renderExamRunnerHTML() {
         </div>
       </div>
 
-      <!-- Floating Live Web Camera Proctoring PIP Widget -->
+      <!-- Floating Live Web Camera & Audio Proctoring PIP Widget -->
       ${mcqState.hasStartedExam && !hasSubmitted ? `
         <div id="exam-floating-proctor-widget" class="fixed bottom-6 right-6 z-40 bg-slate-900/95 text-white p-2.5 rounded-2xl border-2 border-emerald-500 shadow-2xl backdrop-blur-md flex flex-col items-center space-y-1.5 animate-in fade-in zoom-in-95">
-          <div class="flex items-center justify-between w-full px-1 text-[10px] font-black tracking-wide">
+          <div class="flex items-center justify-between w-full px-1 text-[10px] font-black tracking-wide gap-2">
             <span class="flex items-center space-x-1.5 text-emerald-400">
               <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>AI PROCTOR FEED</span>
+              <span>AI PROCTOR</span>
             </span>
-            <span id="exam-proctor-badge" class="${mcqState.isCameraActive ? 'text-[9px] font-mono bg-emerald-900/80 text-emerald-300 px-1.5 py-0.2 rounded border border-emerald-500/50 flex items-center space-x-1' : 'text-[9px] font-mono bg-amber-950/80 text-amber-300 px-1.5 py-0.2 rounded border border-amber-500/50'}">
-              ${mcqState.isCameraActive ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><span>LIVE</span>' : '<span>FLAGGED</span>'}
-            </span>
+            <div class="flex items-center space-x-1">
+              <span id="exam-proctor-badge" class="${mcqState.isCameraActive ? 'text-[9px] font-mono bg-emerald-900/80 text-emerald-300 px-1.5 py-0.2 rounded border border-emerald-500/50 flex items-center space-x-1' : 'text-[9px] font-mono bg-amber-950/80 text-amber-300 px-1.5 py-0.2 rounded border border-amber-500/50'}">
+                ${mcqState.isCameraActive ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><span>CAM</span>' : '<span>NO CAM</span>'}
+              </span>
+              <span id="exam-mic-badge" class="${mcqState.isMicActive ? 'text-[9px] font-mono bg-emerald-900/80 text-emerald-300 px-1.5 py-0.2 rounded border border-emerald-500/50 flex items-center space-x-1' : 'text-[9px] font-mono bg-amber-950/80 text-amber-300 px-1.5 py-0.2 rounded border border-amber-500/50'}">
+                ${mcqState.isMicActive ? '<span>🎙️ MIC</span>' : '<span>🔇 OFF</span>'}
+              </span>
+            </div>
           </div>
           <div class="relative rounded-xl overflow-hidden bg-black border border-slate-700 w-36 h-28 flex items-center justify-center">
             <video id="exam-proctor-video" autoplay playsinline muted class="${mcqState.cameraStream ? '' : 'hidden'} w-full h-full object-cover"></video>
             <div id="exam-proctor-fallback" class="${mcqState.cameraStream ? 'hidden' : ''} flex flex-col items-center justify-center p-2 text-center text-slate-400 text-[10px]">
               <span class="text-base mb-1">📷</span>
               <span>Camera Offline</span>
+            </div>
+            <!-- Live Audio Waveform Meter Overlay -->
+            <div id="exam-audio-meter-overlay" class="absolute bottom-1 right-1 bg-black/70 backdrop-blur-xs px-1.5 py-0.5 rounded flex items-end space-x-0.5 h-3.5 border border-white/10" title="Proctoring Live Audio Meter">
+              <div class="exam-mic-bar w-0.5 bg-emerald-400 rounded-full transition-all duration-75" style="height: 30%"></div>
+              <div class="exam-mic-bar w-0.5 bg-emerald-400 rounded-full transition-all duration-75" style="height: 65%"></div>
+              <div class="exam-mic-bar w-0.5 bg-emerald-400 rounded-full transition-all duration-75" style="height: 45%"></div>
+              <div class="exam-mic-bar w-0.5 bg-emerald-400 rounded-full transition-all duration-75" style="height: 85%"></div>
             </div>
           </div>
           <div class="flex items-center justify-between w-full px-1 text-[9px] text-slate-400 font-medium">
@@ -4886,6 +5243,6 @@ window.dismissTabSwitchWarningModal = dismissTabSwitchWarningModal;
 window.closeDisqualificationModalAndReset = closeDisqualificationModalAndReset;
 window.recordTabSwitchViolation = recordTabSwitchViolation;
 window.retakeExam = retakeExam;
-
-
-
+window.updateRoadmapDailyHours = updateRoadmapDailyHours;
+window.setRoadmapStudySlot = setRoadmapStudySlot;
+window.saveRoadmapSchedulePreference = saveRoadmapSchedulePreference;

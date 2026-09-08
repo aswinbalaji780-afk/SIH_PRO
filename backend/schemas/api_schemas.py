@@ -102,3 +102,9 @@ class MultiLevelQuizSubmissionRequest(BaseModel):
     employee_id: int = 1
     answers: List[QuizAnswerItem]
 
+class SchedulePreferenceRequest(BaseModel):
+    employee_id: Optional[int] = 1
+    daily_study_hours: float = 1.5
+    preferred_slot: Optional[str] = "MORNING"
+
+

@@ -1,6 +1,7 @@
 import os
 import json
 import datetime
+import math
 from typing import List, Optional, Any
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
 from sqlalchemy.orm import Session
@@ -16,7 +17,8 @@ from backend.schemas.api_schemas import (
     LoginRequest, RegisterRequest, TokenResponse, QuizSubmissionRequest, MCQGenerateRequest,
     QuestionReviewRequest, AssistantQueryRequest, SelfAssessmentUpdateRequest,
     SSOSwitchRequest, TargetPositionUpdateRequest, AICourseRecommendRequest, CourseEnrollRequest,
-    TrainerGuideUploadRequest, MultiLevelMCQGenerateRequest, MultiLevelQuizSubmissionRequest
+    TrainerGuideUploadRequest, MultiLevelMCQGenerateRequest, MultiLevelQuizSubmissionRequest,
+    SchedulePreferenceRequest
 )
 from backend.core.security import verify_password, get_password_hash, create_access_token, decode_access_token
 from backend.services.competency_engine import CompetencyEngine
@@ -575,29 +577,136 @@ def get_my_recommendations(employee_id: Optional[int] = None, db: Session = Depe
     return results
 
 @router.get("/learning-paths/my-path")
-def get_my_learning_path(employee_id: Optional[int] = None, db: Session = Depends(get_db)):
+def get_my_learning_path(
+    employee_id: Optional[int] = None,
+    daily_hours: Optional[float] = None,
+    db: Session = Depends(get_db)
+):
     emp_id = employee_id or 1
     path = db.query(LearningPath).filter(LearningPath.employee_id == emp_id).first()
     if not path:
         return {}
 
+    emp = db.query(EmployeeProfile).filter(EmployeeProfile.id == emp_id).first()
+
+    # Query employee gaps to calculate exact study hours needed
+    gaps = db.query(SkillGap).filter(SkillGap.employee_id == emp_id).all()
+    total_gap_points = sum(max(0, g.gap_score) for g in gaps)
+    # Average 0.8 to 1.0 hour of instruction + practical exercise per gap percentage point
+    total_gap_hours = max(28.0, round(total_gap_points * 0.8, 1))
+
+    # Check for stored preference in employee profile
+    stored_pace = 1.5
+    stored_slot = "MORNING"
+    if emp and emp.target_skills and emp.target_skills.startswith("{"):
+        try:
+            p_data = json.loads(emp.target_skills)
+            stored_pace = float(p_data.get("daily_study_hours", 1.5))
+            stored_slot = p_data.get("preferred_slot", "MORNING")
+        except Exception:
+            pass
+
+    # Officer daily study commitment (passed via query, or stored in profile, or default 1.5)
+    pace_hours = daily_hours if (daily_hours and daily_hours > 0) else stored_pace
+    pace_hours = max(0.5, min(6.0, pace_hours))
+    total_days_needed = math.ceil(total_gap_hours / pace_hours)
+    total_weeks_needed = round(total_days_needed / 7.0, 1)
+
+    today = datetime.date.today()
+    target_completion_date = today + datetime.timedelta(days=total_days_needed)
+
     items = []
-    for it in path.items:
+    accumulated_days = 0
+    total_items = max(1, len(path.items))
+    hours_per_milestone = round(total_gap_hours / total_items, 1)
+
+    for idx, it in enumerate(path.items):
+        m_hours = hours_per_milestone
+        m_days = max(1, math.ceil(m_hours / pace_hours))
+        start_day = accumulated_days + 1
+        end_day = accumulated_days + m_days
+        accumulated_days = end_day
+        m_target_date = today + datetime.timedelta(days=end_day)
+
         items.append({
             "step": it.sequence_order,
             "title": it.step_title,
             "status": it.status,
-            "gain": it.competency_gain_expected
+            "gain": it.competency_gain_expected,
+            "estimated_hours": m_hours,
+            "allocated_days": m_days,
+            "target_completion_date": m_target_date.strftime("%d %b %Y"),
+            "schedule_window": f"Day {start_day} - {end_day}"
         })
+
+    schedule_slots = [
+        {
+            "id": "MORNING",
+            "title": "Morning Cadre Focus",
+            "time_window": "07:30 AM – 09:00 AM",
+            "icon": "sunrise",
+            "description": "Recommended for high-retention survey methodologies & Level 3 advanced analysis before official duty hours."
+        },
+        {
+            "id": "MIDDAY",
+            "title": "Mid-Day Microlearning",
+            "time_window": "01:30 PM – 02:30 PM",
+            "icon": "sun",
+            "description": "Recommended for quick 15-minute practice MCQs, flashcards, and video modules during duty breaks."
+        },
+        {
+            "id": "EVENING",
+            "title": "Evening Practical Studio",
+            "time_window": "07:00 PM – 08:30 PM",
+            "icon": "moon",
+            "description": "Recommended for hands-on Python data analysis, RAG exam simulations, and NSSTA trainer guides."
+        }
+    ]
 
     return {
         "title": path.title,
         "description": path.description,
         "starting_level": path.starting_competency_level,
         "target_level": path.target_competency_level,
-        "duration_weeks": path.estimated_duration_weeks,
+        "duration_weeks": total_weeks_needed,
         "completion_percentage": path.completion_percentage,
-        "milestones": items
+        "milestones": items,
+        "skill_gap_summary": {
+            "total_gap_points": total_gap_points,
+            "total_hours_required": total_gap_hours,
+            "daily_hours_commitment": pace_hours,
+            "preferred_slot": stored_slot,
+            "estimated_days": total_days_needed,
+            "estimated_weeks": total_weeks_needed,
+            "target_completion_date": target_completion_date.strftime("%d %b %Y"),
+            "weekly_study_hours": round(pace_hours * 7.0, 1),
+            "critical_competencies_count": len([g for g in gaps if g.priority in ("CRITICAL", "HIGH")]),
+            "schedule_slots": schedule_slots
+        }
+    }
+
+@router.post("/learning-paths/schedule-preference")
+def update_schedule_preference(payload: SchedulePreferenceRequest, db: Session = Depends(get_db)):
+    emp_id = payload.employee_id or 1
+    emp = db.query(EmployeeProfile).filter(EmployeeProfile.id == emp_id).first()
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee profile not found")
+
+    try:
+        data = json.loads(emp.target_skills) if (emp.target_skills and emp.target_skills.startswith("{")) else {}
+    except Exception:
+        data = {}
+
+    data["daily_study_hours"] = float(payload.daily_study_hours)
+    data["preferred_slot"] = payload.preferred_slot
+    emp.target_skills = json.dumps(data)
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"Personalized study schedule set to {payload.daily_study_hours} hrs/day ({payload.preferred_slot} slot).",
+        "daily_study_hours": payload.daily_study_hours,
+        "preferred_slot": payload.preferred_slot
     }
 
 # -------------------------------------------------------------
