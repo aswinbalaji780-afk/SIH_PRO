@@ -1038,6 +1038,23 @@ function setupPersonaNavigation() {
 // 4. View Router & View Renderers
 // -------------------------------------------------------------
 async function loadView(viewName) {
+  // Navigation Guard: Prevent switching website views during active proctored examination
+  if (typeof mcqState !== 'undefined' && mcqState && mcqState.hasStartedExam && !mcqState.lastSubmissionResult && !mcqState.isTerminated && activeView === 'mcq_test_studio' && viewName !== 'mcq_test_studio') {
+    const confirmLeave = confirm(
+      "⚠️ ACTIVE PROCTORED EXAMINATION IN PROGRESS!\n\n" +
+      "Switching between website sections during the test is strictly prohibited under MoSPI proctoring rules.\n\n" +
+      "Leaving the examination room will record a Proctoring Strike (" + ((mcqState.tabSwitchCount || 0) + 1) + " of 3).\n\n" +
+      "Are you sure you want to navigate away from your assessment?"
+    );
+    if (!confirmLeave) {
+      return;
+    }
+    recordTabSwitchViolation("Navigated away from assessment room to section: " + viewName);
+    if (mcqState.isTerminated) {
+      return;
+    }
+  }
+
   const role = (currentUser && currentUser.role) || currentUserRole || 'EMPLOYEE';
   const allowedItems = getRoleNavItems(role);
   const allowedIds = allowedItems.map(item => item.id);
@@ -1049,6 +1066,13 @@ async function loadView(viewName) {
 
   activeView = viewName;
   setupPersonaNavigation();
+
+  if (viewName !== 'mcq_test_studio') {
+    stopMCQExamTimer();
+    disableExamAntiCheating();
+    stopCameraProctoring();
+  }
+
   const main = document.getElementById('main-content');
   main.innerHTML = `<div class="p-12 text-center text-slate-400"><i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto text-govNavy-700 mb-3"></i><p>Loading cadre intelligence view...</p></div>`;
   if (window.lucide) lucide.createIcons();
@@ -2091,7 +2115,13 @@ let mcqState = {
   selectedTrainerId: 1,
   selectedGuideId: 'NSSTA-G-SAMPLING-2026',
   uploadedPdfName: '',
-  isPdfUploadedAndVerified: false
+  isPdfUploadedAndVerified: false,
+  cameraStream: null,
+  isCameraActive: false,
+  cameraDenied: false,
+  tabSwitchCount: 0,
+  isTerminated: false,
+  lastViolationTime: 0
 };
 
 const NSSTA_SAMPLE_GUIDE_TEXT = `NSSTA STATISTICAL CADRE TRAINING MANUAL & METHODOLOGICAL DIRECTIVES (2026)
@@ -2181,11 +2211,15 @@ async function renderMCQTestPageView(container) {
 
   if (window.lucide) lucide.createIcons();
 
-  // Timer Control: ONLY run if the exam was explicitly started by the user!
+  // Timer & Proctoring Control: ONLY run if the exam was explicitly started by the user!
   if (mcqState.activeTab === 'exam_runner' && mcqState.selectedAssessment && mcqState.hasStartedExam && !mcqState.lastSubmissionResult) {
-    // Exam timer is actively running
+    // Exam timer and AI invigilation active
+    enableExamAntiCheating();
+    attachCameraToFeed();
   } else {
     stopMCQExamTimer();
+    disableExamAntiCheating();
+    stopCameraProctoring();
   }
 
   // Pre-Exam Launch Popup: Open when user enters exam runner and has not yet started test
@@ -2195,6 +2229,16 @@ async function renderMCQTestPageView(container) {
 }
 
 function setMCQStudioTab(tab) {
+  if (mcqState.hasStartedExam && !mcqState.lastSubmissionResult && !mcqState.isTerminated && tab !== 'exam_runner') {
+    const confirmLeave = confirm(
+      "⚠️ ACTIVE PROCTORED EXAMINATION IN PROGRESS!\n\n" +
+      "Switching to the Upload Studio will record a Proctoring Strike (" + ((mcqState.tabSwitchCount || 0) + 1) + " of 3).\n\n" +
+      "Do you really want to switch tabs?"
+    );
+    if (!confirmLeave) return;
+    recordTabSwitchViolation("Switched from active test to Upload Studio");
+    if (mcqState.isTerminated) return;
+  }
   stopMCQExamTimer();
   mcqState.activeTab = tab;
   if (tab === 'exam_runner') {
@@ -2204,7 +2248,13 @@ function setMCQStudioTab(tab) {
 }
 
 function selectMCQAssessment(id) {
+  if (mcqState.hasStartedExam && !mcqState.lastSubmissionResult && !mcqState.isTerminated) {
+    const confirmSwitch = confirm("⚠️ Active Examination in Progress!\n\nSwitching to another assessment will abort your current session.\n\nDo you wish to continue?");
+    if (!confirmSwitch) return;
+  }
   stopMCQExamTimer();
+  disableExamAntiCheating();
+  stopCameraProctoring();
   mcqState.selectedAssessmentId = parseInt(id);
   mcqState.selectedAssessment = mcqState.assessments.find(a => a.id === mcqState.selectedAssessmentId) || null;
   mcqState.answers = {};
@@ -2212,6 +2262,9 @@ function selectMCQAssessment(id) {
   mcqState.hasStartedExam = false;
   mcqState.hasDismissedLaunchModal = false;
   mcqState.activeLevelFilter = 0;
+  mcqState.tabSwitchCount = 0;
+  mcqState.isTerminated = false;
+  mcqState.lastViolationTime = 0;
   renderMCQTestPageView(document.getElementById('main-content'));
 }
 
@@ -2340,6 +2393,36 @@ function renderPreExamLaunchModalHTML() {
               ⚡ <b>Timer Behavior:</b> The countdown timer is currently paused. It will strictly run <b>only after you click "Start 30-Minute Examination"</b> below.
             </p>
           </div>
+
+          <!-- Step 4: Proctored Invigilation Security Protocols -->
+          <div class="p-3.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-200 space-y-2">
+            <p class="font-bold text-xs flex items-center space-x-1.5 text-govNavy-900 dark:text-slate-100">
+              <span>🛡️ Anti-Cheating & AI Proctoring Protocols:</span>
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
+              <div class="flex items-start space-x-2 bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
+                <span class="text-base shrink-0">📷</span>
+                <div>
+                  <b class="text-slate-900 dark:text-slate-100">Camera Permission:</b>
+                  <p class="text-slate-500 dark:text-slate-400">Webcam permission prompted upon start for live AI invigilation.</p>
+                </div>
+              </div>
+              <div class="flex items-start space-x-2 bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
+                <span class="text-base shrink-0">🔒</span>
+                <div>
+                  <b class="text-slate-900 dark:text-slate-100">Right-Click Disabled:</b>
+                  <p class="text-slate-500 dark:text-slate-400">Right-clicking, copying, and dev tools shortcuts are blocked.</p>
+                </div>
+              </div>
+              <div class="flex items-start space-x-2 bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
+                <span class="text-base shrink-0">⚠️</span>
+                <div>
+                  <b class="text-slate-900 dark:text-slate-100">Tab Switching Limit:</b>
+                  <p class="text-slate-500 dark:text-slate-400">Leaving app or switching tabs >3 times immediately terminates exam.</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Modal Footer -->
@@ -2397,14 +2480,358 @@ async function handlePreExamPdfUpload(event) {
   showToast(`✅ Automated Course Verification: Verified "${file.name}" notes. Grounded in official syllabus!`);
 }
 
-function startOfficialExam() {
+// -------------------------------------------------------------
+// AI Invigilation & Proctoring: Web Camera & Anti-Cheating
+// -------------------------------------------------------------
+function handleExamContextMenu(e) {
+  if (mcqState.hasStartedExam && !mcqState.lastSubmissionResult) {
+    e.preventDefault();
+    e.stopPropagation();
+    showToast("⚠️ Security Notice: Right-click is strictly disabled during the official proctored assessment!");
+    return false;
+  }
+}
+
+function handleExamKeyDown(e) {
+  if (mcqState.hasStartedExam && !mcqState.lastSubmissionResult) {
+    const isCopy = (e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C');
+    const isPaste = (e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V');
+    const isViewSource = (e.ctrlKey || e.metaKey) && (e.key === 'u' || e.key === 'U');
+    const isDevTools = e.key === 'F12' || ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'i' || e.key === 'I' || e.key === 'j' || e.key === 'J'));
+    if (isCopy || isPaste || isViewSource || isDevTools) {
+      e.preventDefault();
+      e.stopPropagation();
+      showToast("⚠️ Anti-Cheating Protocol: Copying and inspection shortcuts are strictly disabled.");
+      return false;
+    }
+  }
+}
+
+function handleExamVisibilityChange() {
+  if (mcqState.hasStartedExam && !mcqState.lastSubmissionResult && !mcqState.isTerminated) {
+    if (document.visibilityState === 'hidden') {
+      recordTabSwitchViolation("Switched browser tab or minimized application window");
+    }
+  }
+}
+
+function handleExamWindowBlur() {
+  if (mcqState.hasStartedExam && !mcqState.lastSubmissionResult && !mcqState.isTerminated) {
+    recordTabSwitchViolation("Left examination application window / lost focus");
+  }
+}
+
+function handleExamBeforeUnload(e) {
+  if (mcqState.hasStartedExam && !mcqState.lastSubmissionResult && !mcqState.isTerminated) {
+    e.preventDefault();
+    e.returnValue = "⚠️ Active Examination in Progress! Leaving or reloading will count as an exam violation or terminate your assessment.";
+    return e.returnValue;
+  }
+}
+
+function recordTabSwitchViolation(reason) {
+  if (!mcqState.hasStartedExam || mcqState.lastSubmissionResult || mcqState.isTerminated) return;
+  const now = Date.now();
+  // Debounce duplicate events within 1.5 seconds (e.g. visibilitychange + blur fired simultaneously)
+  if (mcqState.lastViolationTime && (now - mcqState.lastViolationTime < 1500)) {
+    return;
+  }
+  mcqState.lastViolationTime = now;
+  mcqState.tabSwitchCount = (mcqState.tabSwitchCount || 0) + 1;
+
+  console.warn(`[Proctoring Alert] Strike #${mcqState.tabSwitchCount}: ${reason}`);
+
+  if (mcqState.tabSwitchCount <= 3) {
+    showTabSwitchWarningModal(mcqState.tabSwitchCount, reason);
+    updateExamSecurityBar();
+  } else {
+    // User switched tabs more than 3 times -> immediately close and terminate the assessment!
+    terminateAssessmentDisqualified(reason);
+  }
+}
+
+function showTabSwitchWarningModal(strikeCount, reason) {
+  const existing = document.getElementById('tab-switch-warning-modal');
+  if (existing) existing.remove();
+
+  const remaining = Math.max(0, 3 - strikeCount);
+  const modal = document.createElement('div');
+  modal.id = 'tab-switch-warning-modal';
+  modal.className = 'fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in';
+  modal.innerHTML = `
+    <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full border-2 border-red-500 shadow-2xl overflow-hidden animate-in zoom-in-95">
+      <!-- Warning Header -->
+      <div class="bg-gradient-to-r from-red-600 to-amber-600 p-4 text-white flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center font-black text-xl shrink-0">
+          ⚠️
+        </div>
+        <div>
+          <h3 class="font-black text-sm tracking-wide uppercase">MoSPI Proctoring Violation Detected!</h3>
+          <p class="text-[11px] text-white/90 font-semibold">Strike ${strikeCount} of 3 • ${remaining} Warning${remaining === 1 ? '' : 's'} Remaining</p>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div class="p-5 space-y-3.5 text-xs text-slate-700 dark:text-slate-300">
+        <div class="p-3 bg-red-50 dark:bg-red-950/50 rounded-xl border border-red-200 dark:border-red-800 text-red-900 dark:text-red-300 space-y-1">
+          <p class="font-bold flex items-center space-x-1.5">
+            <span>🚨 Violation:</span>
+            <span class="font-semibold">${reason || 'Switching browser tabs or leaving application'}</span>
+          </p>
+          <p class="text-[11px] leading-relaxed">
+            National Statistical System Training Academy (NSSTA) and MoSPI guidelines strictly prohibit switching tabs, minimizing windows, or navigating outside the assessment interface.
+          </p>
+        </div>
+
+        <div class="bg-slate-100 dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 space-y-1.5">
+          <p class="font-bold text-govNavy-900 dark:text-slate-100 flex items-center justify-between">
+            <span>Proctoring Rule Enforced:</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${remaining > 0 ? 'bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-300' : 'bg-red-100 dark:bg-red-950 text-red-900 dark:text-red-300'}">
+              ${remaining > 0 ? `${remaining} strike(s) left` : 'Final Warning'}
+            </span>
+          </p>
+          <p class="text-[11px] text-slate-600 dark:text-slate-400">
+            If you switch tabs or leave the examination <b>more than 3 times</b>, the assessment will be <b>immediately closed, terminated, and marked as Disqualified</b> with 0% accredited score on the official cadre ledger.
+          </p>
+        </div>
+
+        <!-- Strike Visual Meter -->
+        <div class="flex items-center justify-center space-x-3 py-2">
+          ${[1, 2, 3].map(i => `
+            <div class="flex-1 py-2 px-3 rounded-lg border text-center font-black text-xs ${i <= strikeCount ? 'bg-red-500 text-white border-red-600 shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700'}">
+              Strike ${i} ${i <= strikeCount ? '⚠️' : '✓'}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="p-4 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex items-center justify-end space-x-2">
+        <button type="button" onclick="dismissTabSwitchWarningModal()" class="w-full sm:w-auto px-5 py-2.5 bg-govNavy-900 hover:bg-govNavy-800 text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer flex items-center justify-center space-x-2">
+          <span>I Understand & Return to Examination</span>
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function dismissTabSwitchWarningModal() {
+  const modal = document.getElementById('tab-switch-warning-modal');
+  if (modal) modal.remove();
+}
+
+function terminateAssessmentDisqualified(reason) {
+  mcqState.isTerminated = true;
+  mcqState.hasStartedExam = false;
+  stopMCQExamTimer();
+  disableExamAntiCheating();
+  stopCameraProctoring();
+
+  const current = mcqState.selectedAssessment;
+  mcqState.lastSubmissionResult = {
+    disqualified: true,
+    score_percentage: 0,
+    total_correct: 0,
+    total_questions: current?.questions?.length || 15,
+    passed: false,
+    passing_score: current?.passing_score || 70,
+    assessed_level: 0,
+    reason: reason || "Exceeded maximum allowable tab/application switches (> 3 violations). Assessment closed by AI invigilator.",
+    disqualification_reason: "Maximum allowable tab-switching strikes (3) exceeded. Disqualified under MoSPI Proctored Examination Standards.",
+    timestamp: new Date().toISOString()
+  };
+
+  dismissTabSwitchWarningModal();
+  showDisqualificationModal(mcqState.lastSubmissionResult);
+  renderMCQTestPageView(document.getElementById('main-content'));
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showDisqualificationModal(result) {
+  const existing = document.getElementById('exam-disqualified-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'exam-disqualified-modal';
+  modal.className = 'fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in';
+  modal.innerHTML = `
+    <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full border-2 border-red-600 shadow-2xl overflow-hidden animate-in zoom-in-95 text-slate-800 dark:text-slate-100">
+      <!-- Header -->
+      <div class="bg-red-600 p-5 text-white flex items-center space-x-3.5">
+        <div class="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center font-black text-2xl shrink-0">
+          🚫
+        </div>
+        <div>
+          <h3 class="font-black text-base uppercase tracking-wider">Assessment Closed & Disqualified</h3>
+          <p class="text-xs text-red-100 font-semibold">Integrity Protocol Violation: Tab Switches Exceeded</p>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="p-6 space-y-4 text-xs">
+        <div class="p-3.5 bg-red-50 dark:bg-red-950/50 rounded-xl border border-red-200 dark:border-red-900 text-red-900 dark:text-red-300 space-y-1">
+          <p class="font-bold">❌ Reason for Immediate Closure:</p>
+          <p class="text-[11px] leading-relaxed">
+            ${result.disqualification_reason || 'Candidate switched browser tabs or left the application more than 3 times during the active proctored examination.'}
+          </p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 text-center">
+          <div class="bg-slate-100 dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+            <span class="text-[10px] uppercase font-bold text-slate-400">Total Violations</span>
+            <p class="text-base font-extrabold text-red-600 mt-0.5">${mcqState.tabSwitchCount} Strikes</p>
+          </div>
+          <div class="bg-slate-100 dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+            <span class="text-[10px] uppercase font-bold text-slate-400">Assessment Status</span>
+            <p class="text-base font-extrabold text-red-600 mt-0.5">DISQUALIFIED</p>
+          </div>
+        </div>
+
+        <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+          In accordance with MoSPI digital certification guidelines, this attempt has been logged with zero score on the National Cadre Competency Ledger. You may reset and retake the assessment when ready.
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div class="p-4 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-end gap-2">
+        <button type="button" onclick="closeDisqualificationModalAndReset()" class="w-full sm:w-auto px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white font-black text-xs rounded-xl shadow-lg transition cursor-pointer flex items-center justify-center space-x-1.5">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+          <span>Reset & Retake Assessment</span>
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeDisqualificationModalAndReset() {
+  const modal = document.getElementById('exam-disqualified-modal');
+  if (modal) modal.remove();
+  retakeExam();
+}
+
+function updateExamSecurityBar() {
+  const barCounter = document.getElementById('exam-tab-switch-badge');
+  if (barCounter) {
+    barCounter.innerHTML = `<span>⚠️ Tab Switches: <b>${mcqState.tabSwitchCount || 0} / 3 Max</b></span>`;
+    if (mcqState.tabSwitchCount > 0) {
+      barCounter.className = "flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-amber-950/80 border border-amber-500 text-amber-300 font-bold animate-pulse";
+    }
+  }
+}
+
+function enableExamAntiCheating() {
+  document.removeEventListener('contextmenu', handleExamContextMenu, true);
+  document.removeEventListener('keydown', handleExamKeyDown, true);
+  document.addEventListener('contextmenu', handleExamContextMenu, true);
+  document.addEventListener('keydown', handleExamKeyDown, true);
+
+  document.removeEventListener('visibilitychange', handleExamVisibilityChange);
+  window.removeEventListener('blur', handleExamWindowBlur);
+  window.removeEventListener('beforeunload', handleExamBeforeUnload);
+
+  document.addEventListener('visibilitychange', handleExamVisibilityChange);
+  window.addEventListener('blur', handleExamWindowBlur);
+  window.addEventListener('beforeunload', handleExamBeforeUnload);
+}
+
+function disableExamAntiCheating() {
+  document.removeEventListener('contextmenu', handleExamContextMenu, true);
+  document.removeEventListener('keydown', handleExamKeyDown, true);
+  document.removeEventListener('visibilitychange', handleExamVisibilityChange);
+  window.removeEventListener('blur', handleExamWindowBlur);
+  window.removeEventListener('beforeunload', handleExamBeforeUnload);
+}
+
+async function initCameraProctoring() {
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 320 }, height: { ideal: 240 }, facingMode: "user" },
+        audio: false
+      });
+      mcqState.cameraStream = stream;
+      mcqState.isCameraActive = true;
+      mcqState.cameraDenied = false;
+      showToast("📷 Web Camera Active: AI Invigilation stream connected successfully!");
+      attachCameraToFeed();
+    } catch (err) {
+      console.warn("Camera permission denied or camera not accessible:", err);
+      mcqState.cameraStream = null;
+      mcqState.isCameraActive = false;
+      mcqState.cameraDenied = true;
+      showToast("⚠️ Camera Permission Denied: Assessment proceeding in flagged proctored mode.");
+      attachCameraToFeed();
+    }
+  } else {
+    mcqState.cameraDenied = true;
+    showToast("⚠️ Web Camera media devices not supported in this browser environment.");
+    attachCameraToFeed();
+  }
+}
+
+function attachCameraToFeed() {
+  const videoEl = document.getElementById('exam-proctor-video');
+  const fallbackEl = document.getElementById('exam-proctor-fallback');
+  const badgeEl = document.getElementById('exam-proctor-badge');
+
+  if (videoEl && mcqState.cameraStream) {
+    try {
+      videoEl.srcObject = mcqState.cameraStream;
+      videoEl.play().catch(e => console.log("Video auto-play handled:", e));
+      if (fallbackEl) fallbackEl.classList.add('hidden');
+      videoEl.classList.remove('hidden');
+    } catch (e) {
+      console.error("Camera stream attachment error:", e);
+    }
+  } else if (fallbackEl && (mcqState.cameraDenied || !mcqState.cameraStream)) {
+    if (videoEl) videoEl.classList.add('hidden');
+    fallbackEl.classList.remove('hidden');
+  }
+
+  if (badgeEl) {
+    if (mcqState.isCameraActive) {
+      badgeEl.className = "text-[9px] font-mono bg-emerald-900/80 text-emerald-300 px-1.5 py-0.2 rounded border border-emerald-500/50 flex items-center space-x-1";
+      badgeEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><span>LIVE</span>`;
+    } else {
+      badgeEl.className = "text-[9px] font-mono bg-amber-950/80 text-amber-300 px-1.5 py-0.2 rounded border border-amber-500/50";
+      badgeEl.innerHTML = `<span>FLAGGED</span>`;
+    }
+  }
+}
+
+function stopCameraProctoring() {
+  if (mcqState.cameraStream) {
+    try {
+      mcqState.cameraStream.getTracks().forEach(track => track.stop());
+    } catch (e) {}
+    mcqState.cameraStream = null;
+  }
+  mcqState.isCameraActive = false;
+  mcqState.cameraDenied = false;
+  const floatingWidget = document.getElementById('exam-floating-proctor-widget');
+  if (floatingWidget) floatingWidget.remove();
+}
+
+async function startOfficialExam() {
   mcqState.hasStartedExam = true;
   mcqState.hasDismissedLaunchModal = true;
+  mcqState.tabSwitchCount = 0;
+  mcqState.isTerminated = false;
+  mcqState.lastViolationTime = 0;
   closePreExamLaunchModal();
+  dismissTabSwitchWarningModal();
+  const disqModal = document.getElementById('exam-disqualified-modal');
+  if (disqModal) disqModal.remove();
+
+  enableExamAntiCheating();
   startMCQExamTimer(mcqState.selectedAssessment?.duration_minutes || 30);
   renderMCQTestPageView(document.getElementById('main-content'));
   showToast("🚀 Official 30-Minute Examination Started! Timer is running (30:00).");
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  await initCameraProctoring();
 }
 
 function filterMCQLevel(lvl) {
@@ -2551,6 +2978,32 @@ function renderExamRunnerHTML() {
           </div>
         ` : ''}
 
+        <!-- Active AI Proctoring & Anti-Cheating Security Bar -->
+        ${mcqState.hasStartedExam && !hasSubmitted ? `
+          <div class="p-3.5 rounded-xl bg-slate-900 text-white border border-slate-700 flex flex-wrap items-center justify-between gap-3 text-xs shadow-md">
+            <div class="flex flex-wrap items-center gap-2.5">
+              <div class="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/80 border border-emerald-500/50 text-emerald-400 font-bold">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>AI Proctor: Web Camera Live</span>
+              </div>
+              <div class="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-red-950/80 border border-red-500/40 text-red-300 font-bold">
+                <span>🔒 Right-Click Disabled</span>
+              </div>
+              <div class="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-blue-950/80 border border-blue-500/40 text-blue-300 font-bold">
+                <span>🛡️ Copying Blocked</span>
+              </div>
+              <div id="exam-tab-switch-badge" class="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg ${mcqState.tabSwitchCount > 0 ? 'bg-amber-950/80 border border-amber-500 text-amber-300 font-bold animate-pulse' : 'bg-slate-800 border border-slate-700 text-slate-300 font-bold'}">
+                <span>⚠️ Tab Switches: <b>${mcqState.tabSwitchCount || 0} / 3 Max</b></span>
+              </div>
+            </div>
+            <div class="flex items-center space-x-2 text-slate-300 font-medium">
+              <span>Candidate: <b>${currentUser ? currentUser.full_name : 'Officer Arun Kumar'}</b></span>
+              <span class="text-slate-500">•</span>
+              <span class="text-amber-400 font-mono text-[11px]">Official Assessment Session</span>
+            </div>
+          </div>
+        ` : ''}
+
         <!-- Level Filter Tabs -->
         <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
           <div class="flex items-center space-x-1.5">
@@ -2579,7 +3032,35 @@ function renderExamRunnerHTML() {
       </div>
 
       <!-- Submission Results Summary Card (If submitted) -->
-      ${hasSubmitted ? `
+      ${hasSubmitted ? (
+        result.disqualified ? `
+          <div class="gov-card p-6 border-2 border-red-500 bg-red-50/40 dark:bg-red-950/30 space-y-4 animate-in fade-in">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-red-200 dark:border-red-900/60 pb-4">
+              <div class="flex items-center space-x-3.5">
+                <div class="w-14 h-14 rounded-2xl bg-red-600 text-white flex items-center justify-center font-black text-2xl shadow-md">
+                  ✕
+                </div>
+                <div>
+                  <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-red-100 text-red-800 border border-red-300">
+                    Disqualified • Proctoring Termination
+                  </span>
+                  <h3 class="text-lg font-black text-slate-900 dark:text-slate-100 mt-1">Assessment Closed Due to Integrity Violation</h3>
+                  <p class="text-xs text-slate-600 dark:text-slate-300">${result.disqualification_reason || result.reason || 'Candidate switched browser tabs or left the application more than 3 times.'}</p>
+                </div>
+              </div>
+              <div class="flex items-center space-x-2">
+                <button onclick="retakeExam()" class="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black transition flex items-center space-x-1.5 shadow-md cursor-pointer">
+                  <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                  <span>Reset & Retake Exam</span>
+                </button>
+              </div>
+            </div>
+            <div class="p-3.5 bg-white dark:bg-slate-900 rounded-xl border border-red-200 dark:border-red-800 text-xs text-red-900 dark:text-red-300 flex items-center justify-between">
+              <span><b>Violations Recorded:</b> ${mcqState.tabSwitchCount} tab/app switch strikes recorded (>3 max allowed). Score accredited: 0%.</span>
+              <span class="font-mono text-[11px] text-slate-500">MoSPI Exam Rules §4.2</span>
+            </div>
+          </div>
+        ` : `
         <div class="gov-card p-6 border-2 ${result.passed ? 'border-emerald-500 bg-emerald-50/20' : 'border-amber-500 bg-amber-50/20'} space-y-5 animate-in fade-in">
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/60 pb-4">
             <div class="flex items-center space-x-3.5">
@@ -2673,7 +3154,7 @@ function renderExamRunnerHTML() {
             `}
           </div>
         </div>
-      ` : ''}
+      `) : ''}
 
       <!-- Question Cards -->
       <div class="space-y-4">
@@ -2693,7 +3174,7 @@ function renderExamRunnerHTML() {
           }
 
           return `
-            <div id="q-card-${q.id}" class="gov-card p-6 space-y-4 ${feedbackItem ? (feedbackItem.is_correct ? 'border-l-4 border-l-emerald-500' : 'border-l-4 border-l-red-500') : ''}">
+            <div id="q-card-${q.id}" class="gov-card p-6 space-y-4 ${mcqState.hasStartedExam && !hasSubmitted ? 'select-none' : ''} ${feedbackItem ? (feedbackItem.is_correct ? 'border-l-4 border-l-emerald-500' : 'border-l-4 border-l-red-500') : ''}">
               <!-- Question Header -->
               <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
                 <div class="flex items-center space-x-2">
@@ -2825,6 +3306,32 @@ function renderExamRunnerHTML() {
           )}
         </div>
       </div>
+
+      <!-- Floating Live Web Camera Proctoring PIP Widget -->
+      ${mcqState.hasStartedExam && !hasSubmitted ? `
+        <div id="exam-floating-proctor-widget" class="fixed bottom-6 right-6 z-40 bg-slate-900/95 text-white p-2.5 rounded-2xl border-2 border-emerald-500 shadow-2xl backdrop-blur-md flex flex-col items-center space-y-1.5 animate-in fade-in zoom-in-95">
+          <div class="flex items-center justify-between w-full px-1 text-[10px] font-black tracking-wide">
+            <span class="flex items-center space-x-1.5 text-emerald-400">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>AI PROCTOR FEED</span>
+            </span>
+            <span id="exam-proctor-badge" class="${mcqState.isCameraActive ? 'text-[9px] font-mono bg-emerald-900/80 text-emerald-300 px-1.5 py-0.2 rounded border border-emerald-500/50 flex items-center space-x-1' : 'text-[9px] font-mono bg-amber-950/80 text-amber-300 px-1.5 py-0.2 rounded border border-amber-500/50'}">
+              ${mcqState.isCameraActive ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><span>LIVE</span>' : '<span>FLAGGED</span>'}
+            </span>
+          </div>
+          <div class="relative rounded-xl overflow-hidden bg-black border border-slate-700 w-36 h-28 flex items-center justify-center">
+            <video id="exam-proctor-video" autoplay playsinline muted class="${mcqState.cameraStream ? '' : 'hidden'} w-full h-full object-cover"></video>
+            <div id="exam-proctor-fallback" class="${mcqState.cameraStream ? 'hidden' : ''} flex flex-col items-center justify-center p-2 text-center text-slate-400 text-[10px]">
+              <span class="text-base mb-1">📷</span>
+              <span>Camera Offline</span>
+            </div>
+          </div>
+          <div class="flex items-center justify-between w-full px-1 text-[9px] text-slate-400 font-medium">
+            <span>MoSPI Invigilated</span>
+            <span class="${mcqState.tabSwitchCount > 0 ? 'text-amber-400 font-bold' : 'text-slate-400'}">Strikes: ${mcqState.tabSwitchCount || 0}/3</span>
+          </div>
+        </div>
+      ` : ''}
     </div>
   `;
 }
@@ -2873,6 +3380,9 @@ async function submitMultiLevelExam() {
 
     const data = await res.json();
     mcqState.lastSubmissionResult = data;
+    stopMCQExamTimer();
+    disableExamAntiCheating();
+    stopCameraProctoring();
     showToast(`🎯 Exam Submitted! Overall: ${data.score_percentage}% (${data.passed ? 'PASSED' : 'COMPLETED'})`);
     renderMCQTestPageView(document.getElementById('main-content'));
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2888,10 +3398,19 @@ async function submitMultiLevelExam() {
 
 function retakeExam() {
   stopMCQExamTimer();
+  disableExamAntiCheating();
+  stopCameraProctoring();
+  dismissTabSwitchWarningModal();
+  const disqModal = document.getElementById('exam-disqualified-modal');
+  if (disqModal) disqModal.remove();
+
   mcqState.answers = {};
   mcqState.lastSubmissionResult = null;
   mcqState.hasStartedExam = false;
   mcqState.hasDismissedLaunchModal = false;
+  mcqState.tabSwitchCount = 0;
+  mcqState.isTerminated = false;
+  mcqState.lastViolationTime = 0;
   renderMCQTestPageView(document.getElementById('main-content'));
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -4363,6 +4882,10 @@ window.closePreExamLaunchModal = closePreExamLaunchModal;
 window.handlePreExamTrainerSelected = handlePreExamTrainerSelected;
 window.handlePreExamPdfUpload = handlePreExamPdfUpload;
 window.startOfficialExam = startOfficialExam;
+window.dismissTabSwitchWarningModal = dismissTabSwitchWarningModal;
+window.closeDisqualificationModalAndReset = closeDisqualificationModalAndReset;
+window.recordTabSwitchViolation = recordTabSwitchViolation;
+window.retakeExam = retakeExam;
 
 
 

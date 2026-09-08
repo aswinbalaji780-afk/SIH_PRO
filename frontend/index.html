@@ -60,7 +60,7 @@
   <!-- Chart.js for data visualization -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <link rel="stylesheet" href="/static/styles.css?v=4.5.5">
+  <link rel="stylesheet" href="/static/styles.css?v=4.5.6">
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col selection:bg-bharatTeal-500 selection:text-white">
 
@@ -80,11 +80,6 @@
         <span class="text-slate-500">/</span>
         <button id="lang-hi" onclick="setLanguage('hi')" class="px-1.5 py-0.5 rounded font-medium text-slate-400 hover:text-white transition">हिंदी</button>
       </div>
-      <!-- Theme Switcher -->
-      <button onclick="toggleTheme()" id="theme-toggle-top-btn" class="flex items-center space-x-1.5 bg-govNavy-800 hover:bg-govNavy-700 px-2 py-0.5 rounded border border-govNavy-700 text-slate-200 transition text-[11px] font-medium cursor-pointer" title="Toggle Government Dark / Light Mode">
-        <span id="theme-mode-icon">🌙</span>
-        <span id="theme-mode-text" class="hidden sm:inline">Dark Mode</span>
-      </button>
       <!-- Cadre Badge -->
       <span class="hidden md:inline-flex items-center text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded text-[11px] border border-emerald-800/40">
         <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>
@@ -179,6 +174,7 @@
         <span class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold rounded-lg flex items-center space-x-1.5">
           <i data-lucide="shield" class="w-3.5 h-3.5 text-govNavy-700 dark:text-sky-400"></i>
           <span>Official Portal Session: Signed Out</span>
+        </span>
       </div>
 
     </div>
@@ -526,8 +522,8 @@
   </div>
 
   <!-- Resilient Client Fallback for GitHub Pages & Offline Evaluation -->
-  <script src="/static/client_mock_fallback.js?v=4.5.5"></script>
+  <script src="/static/client_mock_fallback.js?v=4.5.7"></script>
   <!-- Application Logic with cache busting -->
-  <script src="/static/app.js?v=4.5.5"></script>
+  <script src="/static/app.js?v=4.5.7"></script>
 </body>
 </html>
