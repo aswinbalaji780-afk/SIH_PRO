@@ -114,7 +114,13 @@ class TestAPIEndpoints(unittest.TestCase):
         self.assertGreater(len(questions), 0)
 
         # 3. Submit correct answers to achieve high score
-        answers = [{"question_id": q["id"], "selected_answer": "A"} for q in questions]
+        from backend.models.entities import Question
+        db = SessionLocal()
+        try:
+            q_objs = {q.id: q.correct_answer for q in db.query(Question).filter(Question.assessment_id == assessment_id).all()}
+        finally:
+            db.close()
+        answers = [{"question_id": q["id"], "selected_answer": q_objs.get(q["id"], "A")} for q in questions]
         submit_res = self.client.post(f"/api/v1/assessments/{assessment_id}/submit", json={
             "assessment_id": assessment_id,
             "answers": answers
@@ -227,6 +233,16 @@ class TestAPIEndpoints(unittest.TestCase):
         self.assertGreaterEqual(len(data["supported_providers"]), 3)
 
     def test_multilevel_mcq_workflow(self):
+        db = SessionLocal()
+        try:
+            from backend.models.entities import Assessment
+            old_as = db.query(Assessment).filter(Assessment.title == "Unit Test Multi-Level Evaluation Quiz").all()
+            for oa in old_as:
+                db.delete(oa)
+            db.commit()
+        finally:
+            db.close()
+
         # 1. Upload NSSTA Trainer Guide
         guide_res = self.client.post("/api/v1/mcq/upload-trainer-guide", json={
             "title": "NSSTA Sample Survey & Complex Stratification Guide 2026",

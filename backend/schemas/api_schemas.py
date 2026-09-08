@@ -94,7 +94,7 @@ class MultiLevelMCQGenerateRequest(BaseModel):
     guide_content: Optional[str] = None
     course_id: Optional[int] = 1
     levels: List[int] = [1, 2, 3] # Level 1 (Foundational), Level 2 (Applied), Level 3 (Advanced)
-    count_per_level: int = 4
+    count_per_level: int = 5
     assessment_title: Optional[str] = None
 
 class MultiLevelQuizSubmissionRequest(BaseModel):

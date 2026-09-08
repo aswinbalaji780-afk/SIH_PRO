@@ -1,7 +1,7 @@
 import os
 import json
 import datetime
-from typing import List, Optional
+from typing import List, Optional, Any
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
 from sqlalchemy.orm import Session
 
@@ -358,7 +358,7 @@ def get_target_position_readiness(employee_id: int, db: Session = Depends(get_db
             "title": c.title,
             "provider": c.provider,
             "duration_hours": c.duration_hours,
-            "url": c.external_url or f"https://igotkarmayogi.gov.in/course/{c.course_id}"
+            "url": c.external_url or "https://igotkarmayogi.gov.in"
         } for c in recs]
 
     return {
@@ -547,8 +547,12 @@ def get_my_recommendations(employee_id: Optional[int] = None, db: Session = Depe
     results = []
     for r in recs:
         c = r.course
+        if not c:
+            continue
         results.append({
-            "id": r.id,
+            "id": c.id,
+            "recommendation_id": r.id,
+            "course_db_id": c.id,
             "course_id": c.course_id,
             "title": c.title,
             "description": c.description,
@@ -635,16 +639,43 @@ def list_courses(
         } for c in courses
     ]
 
+def resolve_course_entity(db: Session, identifier: Any) -> Optional[Course]:
+    """
+    Robustly resolves a Course entity from DB by:
+    1. Primary key ID (e.g. 1..6)
+    2. Recommendation ID (e.g. 98 -> resolves to associated Course)
+    3. Course code string (e.g. 'IGOT-STAT-101')
+    4. First catalog course fallback
+    """
+    if identifier is None:
+        return db.query(Course).first()
+    try:
+        id_int = int(identifier)
+        c = db.query(Course).filter(Course.id == id_int).first()
+        if c:
+            return c
+        rec = db.query(Recommendation).filter(Recommendation.id == id_int).first()
+        if rec and rec.course:
+            return rec.course
+    except (ValueError, TypeError):
+        pass
+
+    c = db.query(Course).filter(Course.course_id == str(identifier)).first()
+    if c:
+        return c
+
+    return db.query(Course).first()
+
 @router.post("/courses/{course_id}/enroll")
 def enroll_in_course_by_id(course_id: int, employee_id: Optional[int] = None, db: Session = Depends(get_db)):
     emp_id = employee_id or 1
-    course = db.query(Course).filter(Course.id == course_id).first()
+    course = resolve_course_entity(db, course_id)
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
 
     existing = db.query(Enrollment).filter(
         Enrollment.employee_id == emp_id,
-        Enrollment.course_id == course_id
+        Enrollment.course_id == course.id
     ).first()
 
     clean_url = (course.external_url or "https://igotkarmayogi.gov.in").replace("igot-karmayogi.gov.in", "igotkarmayogi.gov.in")
@@ -664,7 +695,7 @@ def enroll_in_course_by_id(course_id: int, employee_id: Optional[int] = None, db
 
     enrollment = Enrollment(
         employee_id=emp_id,
-        course_id=course_id,
+        course_id=course.id,
         status="IN_PROGRESS",
         progress_pct=10.0,
         enrolled_at=datetime.datetime.utcnow()
@@ -682,7 +713,7 @@ def enroll_in_course_by_id(course_id: int, employee_id: Optional[int] = None, db
 
 @router.get("/courses/{course_id}/igot-preview")
 def get_course_igot_preview(course_id: int, db: Session = Depends(get_db)):
-    course = db.query(Course).filter(Course.id == course_id).first()
+    course = resolve_course_entity(db, course_id)
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
     details = igot_service.get_course_details(course.course_id)
@@ -711,7 +742,7 @@ def get_course_curriculum_notes(course_id: int, db: Session = Depends(get_db)):
     """
     Extracts structured iGOT course curriculum and syllabus text for RAG ingestion.
     """
-    course = db.query(Course).filter(Course.id == course_id).first()
+    course = resolve_course_entity(db, course_id)
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
     details = igot_service.get_course_details(course.course_id or course.title)
@@ -731,6 +762,27 @@ def get_course_curriculum_notes(course_id: int, db: Session = Depends(get_db)):
 @router.get("/nssta/programmes")
 def get_nssta_programmes():
     return nssta_service.get_programmes()
+
+@router.get("/nssta/trainers")
+def get_nssta_trainers():
+    """
+    Returns official NSSTA trainers, designations, and authored guides/materials.
+    """
+    return nssta_service.get_trainers()
+
+@router.get("/nssta/trainers/{trainer_id}")
+def get_nssta_trainer(trainer_id: int):
+    t = nssta_service.get_trainer_by_id(trainer_id)
+    if not t:
+        raise HTTPException(status_code=404, detail="NSSTA trainer not found")
+    return t
+
+@router.get("/nssta/guides/{guide_id}")
+def get_nssta_guide(guide_id: str):
+    g = nssta_service.get_guide_by_id(guide_id)
+    if not g:
+        raise HTTPException(status_code=404, detail="NSSTA guide not found")
+    return g
 
 # -------------------------------------------------------------
 # 7. Learning Material & Document RAG Pipeline
@@ -1034,7 +1086,7 @@ def generate_multilevel_quiz(payload: MultiLevelMCQGenerateRequest, db: Session 
         material_id=mat_id,
         course_id=payload.course_id,
         levels=payload.levels or [1, 2, 3],
-        count_per_level=payload.count_per_level or 4,
+        count_per_level=payload.count_per_level or 5,
         assessment_title=payload.assessment_title or (f"AI Multi-Level Assessment: {course_obj.title}" if course_obj else None)
     )
     return quiz
@@ -1072,18 +1124,22 @@ def get_multilevel_quizzes(course_id: Optional[int] = None, db: Session = Depend
         q = q.filter(Assessment.course_id == course_id)
     assessments = q.order_by(Assessment.created_at.desc()).all()
 
-    if not assessments:
-        # If none currently generated, auto-generate default multi-level assessment with 12 questions
+    # Ensure an official 15-question assessment exists
+    has_15_q = any(len([q_item for q_item in a.questions if q_item.status == "APPROVED"]) >= 15 for a in assessments)
+    if not assessments or not has_15_q:
         default_course = db.query(Course).first()
         AIMCQGenerator.generate_multilevel_quiz_from_guide_and_course(
             db=db,
             material_id=None,
             course_id=default_course.id if default_course else 1,
             levels=[1, 2, 3],
-            count_per_level=4,
-            assessment_title="NSSTA Statistical Cadre Multi-Level Evaluation Exam"
+            count_per_level=5,
+            assessment_title="AI RAG Cadre Comprehensive Multi-Level Exam (15 MCQs • 30 Mins)"
         )
         assessments = db.query(Assessment).filter(Assessment.level.like("%Multi-Level%")).order_by(Assessment.created_at.desc()).all()
+
+    # Prioritize 15+ question comprehensive exams at the top, then newest
+    assessments.sort(key=lambda a: (len([qi for qi in a.questions if qi.status == "APPROVED"]) >= 15, a.created_at), reverse=True)
 
     results = []
     for a in assessments:
@@ -1225,13 +1281,13 @@ def enroll_in_course_payload(payload: CourseEnrollRequest, db: Session = Depends
     """
     1-Click Enrollment for recommended iGOT / NSSTA courses using iGOT Karmayogi API.
     """
-    course = db.query(Course).filter(Course.id == payload.course_id).first()
+    course = resolve_course_entity(db, payload.course_id)
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
 
     existing = db.query(Enrollment).filter(
         Enrollment.employee_id == payload.employee_id,
-        Enrollment.course_id == payload.course_id
+        Enrollment.course_id == course.id
     ).first()
 
     clean_url = (course.external_url or f"https://igotkarmayogi.gov.in").replace("igot-karmayogi.gov.in", "igotkarmayogi.gov.in")
@@ -1251,7 +1307,7 @@ def enroll_in_course_payload(payload: CourseEnrollRequest, db: Session = Depends
 
     new_enrollment = Enrollment(
         employee_id=payload.employee_id,
-        course_id=payload.course_id,
+        course_id=course.id,
         status="IN_PROGRESS",
         progress_pct=10.0,
         enrolled_at=datetime.datetime.utcnow()

@@ -184,7 +184,26 @@ class AICourseRecommender:
             # Bonus for official iGOT / NSSTA sources
             is_igot = "igot" in (course.provider or "").lower() or "igot" in (course.source or "").lower()
             if is_igot:
-                relevance_score += 15.0
+                relevance_score += 12.0
+
+            # Semantic alignment with Target Role Profile
+            target_title_lower = target_role.title.lower()
+            course_title_lower = course.title.lower()
+
+            if "director" in target_title_lower:
+                if any(w in course_title_lower for w in ["leadership", "governance", "executive", "communication", "generative ai", "national accounts"]):
+                    relevance_score += 30.0
+                if course.skill_level == "Advanced":
+                    relevance_score += 15.0
+            elif "analyst" in target_title_lower or "analytics" in target_title_lower:
+                if any(w in course_title_lower for w in ["python", "machine learning", "big data", "sql", "visualization"]):
+                    relevance_score += 30.0
+            elif "sso" in target_title_lower or "senior statistical" in target_title_lower:
+                if any(w in course_title_lower for w in ["sampling", "survey", "national accounts", "python", "sql"]):
+                    relevance_score += 25.0
+            elif "assistant director" in target_title_lower or "ad, iss" in target_title_lower:
+                if any(w in course_title_lower for w in ["machine learning", "cloud", "visualization", "governance", "national accounts"]):
+                    relevance_score += 25.0
 
             normalized_match = min(99, max(65, int(relevance_score)))
 

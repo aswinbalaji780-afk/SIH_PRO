@@ -12,6 +12,7 @@
 
 body {
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 /* Custom Scrollbar */
@@ -30,7 +31,7 @@ body {
   background: #94a3b8;
 }
 
-/* Professional Card Hover & Focus States */
+/* Base Card Hover & Focus States */
 .gov-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -71,4 +72,385 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
 }
 .ai-pulse {
   animation: pulseSubtle 3s infinite ease-in-out;
+}
+
+/* ======================================================== */
+/* UNIVERSAL GOVERNMENT NAVY PALETTE & GRADIENTS */
+/* Works in both Light & Dark modes */
+/* ======================================================== */
+.bg-govNavy-950 { background-color: #040b17 !important; }
+.bg-govNavy-900 { background-color: #07162c !important; }
+.bg-govNavy-800 { background-color: #0c2340 !important; }
+.bg-govNavy-700 { background-color: #16365d !important; }
+.bg-govNavy-600 { background-color: #1d4474 !important; }
+
+.text-govNavy-950 { color: #040b17 !important; }
+.text-govNavy-900 { color: #07162c !important; }
+.text-govNavy-800 { color: #0c2340 !important; }
+.text-govNavy-700 { color: #16365d !important; }
+
+.border-govNavy-900 { border-color: #07162c !important; }
+.border-govNavy-800 { border-color: #0c2340 !important; }
+.border-govNavy-700 { border-color: #16365d !important; }
+.border-govNavy-600 { border-color: #1d4474 !important; }
+
+/* Tailwind Linear Gradient Fixes */
+.from-govNavy-900 {
+  --tw-gradient-from: #07162c var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(7 22 44 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+.from-govNavy-800 {
+  --tw-gradient-from: #0c2340 var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(12 35 64 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+.via-govNavy-800 {
+  --tw-gradient-to: rgb(12 35 64 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), #0c2340 var(--tw-gradient-via-position), var(--tw-gradient-to);
+}
+.to-govNavy-900 {
+  --tw-gradient-to: #07162c var(--tw-gradient-to-position);
+}
+.to-slate-900 {
+  --tw-gradient-to: #0f172a var(--tw-gradient-to-position);
+}
+.to-indigo-950 {
+  --tw-gradient-to: #1e1b4b var(--tw-gradient-to-position);
+}
+
+/* Bharat Teal & Saffron Accents */
+.text-bharatTeal-600 { color: #008080 !important; }
+.text-bharatTeal-500 { color: #0e9494 !important; }
+.bg-bharatTeal-600 { background-color: #008080 !important; }
+.bg-bharatTeal-500 { background-color: #0e9494 !important; }
+
+/* Dark Banners text visibility in both Light & Dark Mode */
+.bg-govNavy-950,
+.bg-govNavy-900,
+.bg-govNavy-800,
+.bg-govNavy-700,
+[class*="from-govNavy-900"],
+[class*="from-govNavy-800"],
+.gov-card[class*="from-govNavy"],
+.gov-card[class*="bg-govNavy"] {
+  color: #ffffff !important;
+}
+[class*="from-govNavy"] h1, [class*="from-govNavy"] h2, [class*="from-govNavy"] h3, [class*="from-govNavy"] h4,
+[class*="bg-govNavy"] h1, [class*="bg-govNavy"] h2, [class*="bg-govNavy"] h3, [class*="bg-govNavy"] h4 {
+  color: #ffffff !important;
+}
+.bg-govNavy-900 .text-slate-300,
+.bg-govNavy-800 .text-slate-300,
+[class*="from-govNavy"] .text-slate-300 {
+  color: #cbd5e1 !important;
+}
+.bg-govNavy-900 .text-slate-200,
+.bg-govNavy-800 .text-slate-200,
+[class*="from-govNavy"] .text-slate-200 {
+  color: #e2e8f0 !important;
+}
+.bg-govNavy-900 .text-slate-400,
+.bg-govNavy-800 .text-slate-400,
+[class*="from-govNavy"] .text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+/* ======================================================== */
+/* LIGHT MODE HIGH-CONTRAST READABILITY ENHANCEMENTS */
+/* ======================================================== */
+html:not(.dark) {
+  color-scheme: light;
+  background-color: #f8fafc;
+}
+html:not(.dark) body {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+html:not(.dark) .gov-card:not([class*="from-govNavy"]):not([class*="bg-govNavy"]) {
+  background-color: #ffffff;
+  border-color: #e2e8f0;
+  color: #0f172a;
+}
+html:not(.dark) .bg-white:not([class*="from-govNavy"]):not([class*="bg-govNavy"]) {
+  background-color: #ffffff !important;
+}
+html:not(.dark) .bg-slate-50:not([class*="from-govNavy"]):not([class*="bg-govNavy"]) {
+  background-color: #f8fafc !important;
+}
+html:not(.dark) .bg-slate-100:not([class*="from-govNavy"]):not([class*="bg-govNavy"]) {
+  background-color: #f1f5f9 !important;
+}
+
+/* High contrast typography in light mode */
+html:not(.dark) .text-slate-900,
+html:not(.dark) .text-slate-800 {
+  color: #0f172a !important;
+}
+html:not(.dark) .text-slate-700 {
+  color: #1e293b !important;
+}
+html:not(.dark) .text-slate-600 {
+  color: #334155 !important;
+}
+html:not(.dark) .text-slate-500 {
+  color: #475569 !important;
+}
+html:not(.dark) .text-slate-400 {
+  color: #64748b !important;
+}
+
+/* Top bar text & badges in light mode */
+html:not(.dark) header {
+  background-color: #ffffff !important;
+  border-bottom-color: #e2e8f0 !important;
+}
+html:not(.dark) aside > div {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+html:not(.dark) .exam-option-label {
+  background-color: #ffffff;
+  border-color: #e2e8f0;
+  color: #1e293b;
+}
+html:not(.dark) .exam-option-label:hover {
+  background-color: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+/* ======================================================== */
+/* HARMONIOUS GOVERNMENT DARK THEME (UNIFIED FRAMES) */
+/* ======================================================== */
+html.dark {
+  color-scheme: dark;
+  background-color: #0a1120 !important;
+}
+
+html.dark body {
+  background-color: #0a1120 !important;
+  color: #cbd5e1 !important;
+}
+
+html.dark ::-webkit-scrollbar-track {
+  background: #0d1728;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: #243859;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #365380;
+}
+
+/* App Header & Navigation */
+html.dark header {
+  background-color: #0e182c !important;
+  border-bottom-color: #1c2e4d !important;
+}
+
+html.dark aside > div,
+html.dark aside .bg-white {
+  background-color: #111d33 !important;
+  border-color: #1c2e4d !important;
+}
+
+html.dark #sidebar-nav button {
+  color: #cbd5e1 !important;
+}
+html.dark #sidebar-nav button:hover {
+  background-color: #162540 !important;
+  color: #ffffff !important;
+}
+html.dark #sidebar-nav button.bg-govNavy-800 {
+  background-color: #1c3052 !important;
+  color: #ffffff !important;
+}
+
+/* Primary Cards & Outer Frames */
+html.dark .gov-card,
+html.dark .bg-white {
+  background-color: #111d33 !important;
+  border-color: #1c2e4d !important;
+  color: #e2e8f0;
+}
+html.dark .gov-card:hover {
+  border-color: #2b4570 !important;
+  box-shadow: 0 6px 18px -2px rgba(0, 0, 0, 0.45);
+}
+
+/* Secondary Nested Frames & Sub-boxes (Unified tone - no mismatch!) */
+html.dark .bg-slate-50,
+html.dark [class*="bg-slate-50"] {
+  background-color: #162540 !important;
+  border-color: #1c2e4d !important;
+}
+html.dark .bg-slate-100,
+html.dark [class*="bg-slate-100"] {
+  background-color: #162540 !important;
+  border-color: #22385c !important;
+}
+html.dark .bg-slate-200,
+html.dark [class*="bg-slate-200"] {
+  background-color: #1c3052 !important;
+  border-color: #2a446e !important;
+}
+
+/* Harmonious Tinted Frames (Integrated with dark navy, NOT muddy!) */
+html.dark [class*="bg-blue-50"],
+html.dark [class*="bg-blue-100"] {
+  background-color: #122442 !important;
+  border-color: #1d4479 !important;
+  color: #93c5fd !important;
+}
+html.dark [class*="bg-amber-50"],
+html.dark [class*="bg-amber-100"] {
+  background-color: #24231a !important;
+  border-color: #855b14 !important;
+  color: #fde68a !important;
+}
+html.dark [class*="bg-emerald-50"],
+html.dark [class*="bg-emerald-100"] {
+  background-color: #0d2825 !important;
+  border-color: #12644d !important;
+  color: #a7f3d0 !important;
+}
+html.dark [class*="bg-purple-50"],
+html.dark [class*="bg-purple-100"] {
+  background-color: #1c1935 !important;
+  border-color: #483c79 !important;
+  color: #d8b4fe !important;
+}
+
+/* Typography Contrast Inversion in Dark Mode */
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-govNavy-900,
+html.dark .text-govNavy-800,
+html.dark [class*="text-slate-900"],
+html.dark [class*="text-slate-800"],
+html.dark [class*="text-govNavy-900"],
+html.dark [class*="text-govNavy-800"] {
+  color: #f8fafc !important;
+}
+html.dark .text-slate-700,
+html.dark .text-slate-600,
+html.dark .text-govNavy-700,
+html.dark [class*="text-slate-700"],
+html.dark [class*="text-slate-600"],
+html.dark [class*="text-govNavy-700"] {
+  color: #cbd5e1 !important;
+}
+html.dark .text-slate-500,
+html.dark .text-slate-400,
+html.dark [class*="text-slate-500"],
+html.dark [class*="text-slate-400"] {
+  color: #94a3b8 !important;
+}
+
+/* Unified Borders in Dark Mode */
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-slate-300,
+html.dark [class*="border-slate-100"],
+html.dark [class*="border-slate-200"],
+html.dark [class*="border-slate-300"] {
+  border-color: #1c2e4d !important;
+}
+
+/* Inputs, Selects & Textareas in Dark Mode */
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #0d1728 !important;
+  color: #f8fafc !important;
+  border-color: #22385c !important;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748b !important;
+}
+html.dark input:focus,
+html.dark select:focus,
+html.dark textarea:focus {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25) !important;
+}
+html.dark option {
+  background-color: #111d33 !important;
+  color: #f8fafc !important;
+}
+
+/* Auth Portal */
+html.dark #auth-portal {
+  background: linear-gradient(to bottom, #070e1c, #0d1728) !important;
+}
+html.dark #auth-portal > div {
+  background-color: #111d33 !important;
+  border-color: #1c2e4d !important;
+}
+html.dark #auth-role-tabs button {
+  background-color: #162540 !important;
+  border-color: #1c2e4d !important;
+  color: #cbd5e1 !important;
+}
+html.dark #auth-role-tabs button.bg-govNavy-800 {
+  background-color: #1c3052 !important;
+  color: #ffffff !important;
+}
+html.dark #tab-login,
+html.dark #tab-register {
+  background-color: #111d33 !important;
+}
+html.dark #btn-quick-demo {
+  background-color: #162540 !important;
+  border-color: #22385c !important;
+  color: #f1f5f9 !important;
+}
+html.dark #btn-quick-demo:hover {
+  background-color: #1c3052 !important;
+}
+
+/* Exam Option Frames in Dark Mode */
+html.dark .exam-option-label {
+  background-color: #162540 !important;
+  border-color: #1c2e4d !important;
+  color: #e2e8f0 !important;
+}
+html.dark .exam-option-label:hover {
+  background-color: #1c3052 !important;
+  border-color: #2b4570 !important;
+}
+
+/* Modals, Drawers & Popups (Unified frame tone) */
+html.dark #pre-exam-launch-modal > div > div,
+html.dark #evidence-modal > div,
+html.dark #igot-player-modal > div,
+html.dark #notif-dropdown {
+  background-color: #111d33 !important;
+  border-color: #1c2e4d !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7) !important;
+}
+
+html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #1c2e4d !important;
+}
+
+html.dark #ai-copilot-drawer {
+  background-color: #0e182c !important;
+  border-color: #1c2e4d !important;
+}
+html.dark #ai-copilot-drawer .bg-white {
+  background-color: #111d33 !important;
+}
+
+/* Theme Toggle Button */
+html.dark #theme-toggle-top-btn,
+html.dark .theme-toggle-btn {
+  background-color: #162540 !important;
+  border-color: #1c2e4d !important;
+  color: #f8fafc !important;
+}
+html.dark #theme-toggle-top-btn:hover {
+  background-color: #1c3052 !important;
 }

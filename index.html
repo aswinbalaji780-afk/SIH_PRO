@@ -11,14 +11,22 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
   
-  <!-- Tailwind CSS & Lucide Icons -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- Chart.js for data visualization -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
   <script>
-    tailwind.config = {
+    // Immediate dark theme initialization to prevent flash
+    (function() {
+      try {
+        var theme = localStorage.getItem('theme');
+        if (theme === 'dark' || (!theme && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      } catch (e) {}
+    })();
+
+    // Configure Tailwind BEFORE Tailwind script loads
+    window.tailwind = {
+      darkMode: 'class',
       theme: {
         extend: {
           colors: {
@@ -44,9 +52,15 @@
           }
         }
       }
-    }
+    };
   </script>
-  <link rel="stylesheet" href="frontend/styles.css">
+  <!-- Tailwind CSS & Lucide Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js for data visualization -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <link rel="stylesheet" href="frontend/styles.css?v=4.5.5">
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col selection:bg-bharatTeal-500 selection:text-white">
 
@@ -66,6 +80,11 @@
         <span class="text-slate-500">/</span>
         <button id="lang-hi" onclick="setLanguage('hi')" class="px-1.5 py-0.5 rounded font-medium text-slate-400 hover:text-white transition">हिंदी</button>
       </div>
+      <!-- Theme Switcher -->
+      <button onclick="toggleTheme()" id="theme-toggle-top-btn" class="flex items-center space-x-1.5 bg-govNavy-800 hover:bg-govNavy-700 px-2 py-0.5 rounded border border-govNavy-700 text-slate-200 transition text-[11px] font-medium cursor-pointer" title="Toggle Government Dark / Light Mode">
+        <span id="theme-mode-icon">🌙</span>
+        <span id="theme-mode-text" class="hidden sm:inline">Dark Mode</span>
+      </button>
       <!-- Cadre Badge -->
       <span class="hidden md:inline-flex items-center text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded text-[11px] border border-emerald-800/40">
         <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>
@@ -112,9 +131,14 @@
           <span class="hidden md:inline" data-i18n="header.aiAssistant">AI Copilot</span>
         </button>
 
+        <!-- Theme Toggle -->
+        <button type="button" onclick="toggleTheme()" class="p-2 text-slate-600 dark:text-slate-300 hover:text-govNavy-900 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer" title="Toggle Theme">
+          <i data-lucide="moon" id="theme-toggle-main-icon" class="w-5 h-5"></i>
+        </button>
+
         <!-- Notification Bell -->
         <div class="relative">
-          <button onclick="toggleNotifications()" class="p-2 text-slate-600 hover:text-govNavy-900 rounded-lg hover:bg-slate-100 relative">
+          <button id="notif-btn" onclick="toggleNotifications(event)" class="p-2 text-slate-600 hover:text-govNavy-900 rounded-lg hover:bg-slate-100 relative">
             <i data-lucide="bell" class="w-5 h-5"></i>
             <span id="notif-badge" class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
           </button>
@@ -149,10 +173,12 @@
 
       <!-- Guest / Authentication Portal Header Badge -->
       <div id="guest-header-badge" class="flex items-center space-x-2">
-        <span class="px-3 py-1.5 bg-slate-100 border border-slate-200 text-slate-600 text-xs font-semibold rounded-lg flex items-center space-x-1.5">
-          <i data-lucide="shield" class="w-3.5 h-3.5 text-govNavy-700"></i>
+        <button type="button" onclick="toggleTheme()" class="p-2 text-slate-600 dark:text-slate-300 hover:text-govNavy-900 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer" title="Toggle Theme">
+          <i data-lucide="moon" class="w-5 h-5"></i>
+        </button>
+        <span class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold rounded-lg flex items-center space-x-1.5">
+          <i data-lucide="shield" class="w-3.5 h-3.5 text-govNavy-700 dark:text-sky-400"></i>
           <span>Official Portal Session: Signed Out</span>
-        </span>
       </div>
 
     </div>
@@ -322,37 +348,6 @@
         <nav class="space-y-1 text-sm font-medium" id="sidebar-nav">
           <!-- Dynamically customized per persona in app.js -->
         </nav>
-
-        <hr class="my-4 border-slate-100">
-
-        <!-- Integration Status Widget -->
-        <div class="bg-slate-50 rounded-lg p-3 border border-slate-200 text-xs">
-          <div class="flex items-center justify-between mb-1.5">
-            <span class="font-semibold text-slate-700">Integrations</span>
-            <span class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-medium">SANDBOX</span>
-          </div>
-          <div class="space-y-1 text-[11px] text-slate-600">
-            <div class="flex items-center justify-between">
-              <span class="flex items-center"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>iGOT Karmayogi</span>
-              <span class="text-slate-400">v1.4</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="flex items-center"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>NSSTA TPAC</span>
-              <span class="text-slate-400">2026-27</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="flex items-center"><span class="w-1.5 h-1.5 rounded-full bg-blue-500 mr-1.5"></span>Grounded RAG</span>
-              <span class="text-slate-400">Online</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sidebar Sign Out Action -->
-        <button type="button" onclick="handleLogout()" class="w-full mt-3 py-2 px-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-semibold flex items-center justify-center space-x-2 border border-red-200 transition cursor-pointer">
-          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
-          <span>Sign Out of Cadre</span>
-        </button>
-
       </div>
     </aside>
 
@@ -531,8 +526,8 @@
   </div>
 
   <!-- Resilient Client Fallback for GitHub Pages & Offline Evaluation -->
-  <script src="frontend/client_mock_fallback.js?v=4.2.0"></script>
+  <script src="frontend/client_mock_fallback.js?v=4.5.5"></script>
   <!-- Application Logic with cache busting -->
-  <script src="frontend/app.js?v=4.2.0"></script>
+  <script src="frontend/app.js?v=4.5.5"></script>
 </body>
 </html>

@@ -317,18 +317,205 @@
       });
     }
 
-    // 7. AI Course Recommendations
-    if (url.includes('/ai/recommend-igot-courses')) {
+    // 7. AI Course Recommendations & Cadre Transition Plan (Dynamic by Role)
+    if (url.includes('/ai/recommend-igot-courses') || url.includes('/cadre/career-transition-plan')) {
+      let b = {};
+      try { b = JSON.parse(opts.body || '{}'); } catch(e){}
+      const currentRole = b.current_job_role_id || 1;
+      const targetRole = b.target_job_role_id || 2;
+
+      let courses = [];
+      let rationale = "";
+
+      if (targetRole >= 5) {
+        // Executive / Senior Leadership (Director, Joint Director)
+        courses = [
+          {
+            id: 110,
+            title: "Applied Machine Learning for Official Statistics & Predictive Imputation",
+            provider: "iGOT Karmayogi & IIT Partner",
+            duration_hours: 24,
+            skill_level: "Advanced",
+            phase: "Phase 3: Executive Analytics",
+            match_score_pct: 99,
+            gap_match_score: 98,
+            role_match_score: 99,
+            ai_rationale: "Addresses critical machine learning imputation deficits required for macro-level statistical forecasting and automated outlier screening at the Director/JD cadre level.",
+            external_url: "https://igotkarmayogi.gov.in",
+            is_enrolled: false
+          },
+          {
+            id: 104,
+            title: "Advanced Survey Methodology & National Accounts Compilation",
+            provider: "NSSTA TPAC 2026",
+            duration_hours: 30,
+            skill_level: "Advanced",
+            phase: "Phase 2: Core Cadre Elevation",
+            match_score_pct: 95,
+            gap_match_score: 94,
+            role_match_score: 96,
+            ai_rationale: "Essential for supervisory oversight of supply-use tables, national income accounting, and macroeconomic deflation standards.",
+            external_url: "https://igotkarmayogi.gov.in",
+            is_enrolled: false
+          },
+          {
+            id: 108,
+            title: "Official Statistics Dissemination, Policy Communication & Leadership",
+            provider: "iGOT Karmayogi & IIM",
+            duration_hours: 14,
+            skill_level: "Advanced",
+            phase: "Phase 1: Cadre Transition",
+            match_score_pct: 91,
+            gap_match_score: 90,
+            role_match_score: 92,
+            ai_rationale: "Prepares senior statisticians for ministerial briefings, press conferences, and strategic inter-departmental statistical coordination.",
+            external_url: "https://igotkarmayogi.gov.in",
+            is_enrolled: true
+          }
+        ];
+        rationale = "Transitioning to Senior Executive Cadre (Director/Joint Director) requires elevating key leadership, machine learning governance, and national income compilation standards.";
+      } else if (targetRole === 3 || targetRole === 4) {
+        // Mid Cadre / Assistant Director / Deputy Director
+        courses = [
+          {
+            id: 105,
+            title: "Data Visualization & Executive Dashboards for MoSPI Bulletins",
+            provider: "iGOT Karmayogi Bharat",
+            duration_hours: 18,
+            skill_level: "Intermediate",
+            phase: "Phase 1: Foundational Bridging",
+            match_score_pct: 96,
+            gap_match_score: 95,
+            role_match_score: 97,
+            ai_rationale: "Builds high-impact interactive data visualization capabilities for parliamentary reports and national statistical releases.",
+            external_url: "https://igotkarmayogi.gov.in",
+            is_enrolled: false
+          },
+          {
+            id: 106,
+            title: "Geospatial Data Analysis & GIS Mapping in Official Statistics",
+            provider: "NSSTA & Survey of India",
+            duration_hours: 22,
+            skill_level: "Intermediate",
+            phase: "Phase 2: Technical Specialization",
+            match_score_pct: 92,
+            gap_match_score: 90,
+            role_match_score: 94,
+            ai_rationale: "Enables thematic boundary mapping and spatial stratification for regional survey blocks and economic census rounds.",
+            external_url: "https://igotkarmayogi.gov.in",
+            is_enrolled: false
+          },
+          {
+            id: 107,
+            title: "Large-Scale Data Engineering with PySpark & Cloud Analytics",
+            provider: "iGOT Karmayogi Bharat",
+            duration_hours: 28,
+            skill_level: "Advanced",
+            phase: "Phase 3: Data Infrastructure",
+            match_score_pct: 88,
+            gap_match_score: 87,
+            role_match_score: 89,
+            ai_rationale: "Equips intermediate cadre officers to process billions of census and administrative tax records on MoSPI National Data Warehouse cloud infrastructure.",
+            external_url: "https://igotkarmayogi.gov.in",
+            is_enrolled: false
+          }
+        ];
+        rationale = "Targeting Assistant / Deputy Director focuses on modernizing large-scale data engineering pipelines, interactive dashboard reporting, and geospatial analytics.";
+      } else {
+        // Operational Cadre (SSO / Statistical Officer)
+        courses = [
+          {
+            id: 101,
+            title: "Sampling Methods & Survey Design for Official Statistics",
+            provider: "iGOT Karmayogi & NSSTA",
+            duration_hours: 16,
+            skill_level: "Intermediate",
+            phase: "Phase 1: Foundational Cadre Bridging",
+            match_score_pct: 97,
+            gap_match_score: 98,
+            role_match_score: 96,
+            ai_rationale: "Directly targets the primary gap in Probability Proportional to Size (PPS) and multistage sample selection for nationwide household surveys.",
+            external_url: "https://igotkarmayogi.gov.in",
+            is_enrolled: false
+          },
+          {
+            id: 102,
+            title: "Python for Automated Data Validation & Microdata Processing",
+            provider: "iGOT Karmayogi Bharat",
+            duration_hours: 20,
+            skill_level: "Intermediate",
+            phase: "Phase 2: Core Cadre Competency Elevation",
+            match_score_pct: 93,
+            gap_match_score: 92,
+            role_match_score: 94,
+            ai_rationale: "Automates range validations and structural checks across PLFS and Annual Survey of Industries microdata batches.",
+            external_url: "https://igotkarmayogi.gov.in",
+            is_enrolled: true
+          },
+          {
+            id: 103,
+            title: "Relational Database Management & SQL for Statistical Registries",
+            provider: "iGOT Karmayogi Bharat",
+            duration_hours: 14,
+            skill_level: "Foundational",
+            phase: "Phase 3: Specialized Operational Proficiency",
+            match_score_pct: 89,
+            gap_match_score: 88,
+            role_match_score: 90,
+            ai_rationale: "Provides fundamental relational schema querying skills for linking enterprise registers and demographic sampling frames.",
+            external_url: "https://igotkarmayogi.gov.in",
+            is_enrolled: false
+          }
+        ];
+        rationale = "Targeting Senior Statistical Officer prioritizes survey sampling design, microdata automated cleaning with Python, and SQL registry operations.";
+      }
+
+      const curRoleObj = MOCK_CADRE_OPTIONS.job_roles.find(r => r.id === currentRole) || MOCK_CADRE_OPTIONS.job_roles[0];
+      const tgtRoleObj = MOCK_CADRE_OPTIONS.job_roles.find(r => r.id === targetRole) || MOCK_CADRE_OPTIONS.job_roles[1];
+
       return jsonResponse({
         status: 'SUCCESS',
-        recommended_courses: MOCK_RECOMMENDATIONS,
-        transition_rationale: 'Curated 4-module pathway closing statistical sampling and microdata validation gaps for promotion to Senior Statistical Officer.'
+        current_role: curRoleObj,
+        target_role: tgtRoleObj,
+        promotion_readiness_pct: targetRole >= 5 ? 72.9 : targetRole >= 3 ? 78.4 : 84.5,
+        readiness_status: targetRole >= 5 ? "Near Readiness — Targeted Gap Closure Needed" : "On Track — High Promotion Eligibility",
+        transition_rationale: rationale,
+        ai_strategic_roadmap: `${rationale} Aligned with the MoSPI National Competency Framework for official statistical personnel.`,
+        recommended_courses: courses,
+        competency_deltas: [
+          { competency_id: 1, competency_name: "Sampling & Survey Design", current_score: 55, target_score: 85, gap_points: 30, is_met: false },
+          { competency_id: 2, competency_name: "National Accounts Compilation", current_score: 50, target_score: 80, gap_points: 30, is_met: false },
+          { competency_id: 7, competency_name: "Python Programming for Official Stats", current_score: 62, target_score: 85, gap_points: 23, is_met: false },
+          { competency_id: 8, competency_name: "AI / Machine Learning Imputation", current_score: 35, target_score: 85, gap_points: 50, is_met: false },
+          { competency_id: 3, competency_name: "Price Statistics & Index Numbers", current_score: 72, target_score: 70, gap_points: 0, is_met: true }
+        ]
       });
     }
 
-    // 8. Course Preview & iGOT Player
+    // 8. Course Preview & iGOT Player (Dynamic for any course ID)
     if (url.includes('/igot-preview')) {
-      return jsonResponse(MOCK_RECOMMENDATIONS[0]);
+      const match = url.match(/\/courses\/(\d+)\/igot-preview/);
+      const requestedId = match ? parseInt(match[1]) : 101;
+      const foundCourse = (MOCK_RECOMMENDATIONS && MOCK_RECOMMENDATIONS.find(c => c.id === requestedId)) || {
+        id: requestedId,
+        title: requestedId >= 109 ? "Applied Machine Learning for Official Statistics & Predictive Imputation" :
+               requestedId >= 106 ? "Geospatial Data Analysis & GIS Mapping in Official Statistics" :
+               requestedId >= 104 ? "Advanced Survey Methodology & National Accounts Compilation" :
+               requestedId === 102 ? "Python for Automated Data Validation & Microdata Processing" :
+               "Sampling Methods & Survey Design for Official Statistics",
+        provider: requestedId >= 109 ? "iGOT Karmayogi & IIT Partner" : requestedId >= 104 ? "NSSTA TPAC 2026" : "iGOT Karmayogi & NSSTA",
+        duration_hours: 24,
+        skill_level: requestedId >= 104 ? "Advanced" : "Intermediate",
+        external_url: "https://igotkarmayogi.gov.in",
+        is_enrolled: false,
+        syllabus: [
+          "Module 1: Principles & Frameworks in Indian Official Statistics",
+          "Module 2: Practical Data Processing & Empirical Modeling",
+          "Module 3: Advanced Cadre Methodologies & Imputation",
+          "Module 4: Quality Assurance & Dissemination Standards"
+        ]
+      };
+      return jsonResponse(foundCourse);
     }
 
     // 8b. Course Curriculum Notes (for RAG Assessment Generation)
@@ -351,7 +538,37 @@
       });
     }
 
-    // 8c. Publish as Official Main Assessment
+    // 8c. NSSTA Trainers & Guides API Integration
+    if (url.includes('/nssta/trainers')) {
+      return jsonResponse([
+        {
+          id: 1,
+          name: "Dr. Priya Sharma",
+          designation: "Course Director & Senior Faculty (Sampling & Methodology)",
+          department: "National Statistical Systems Training Academy (NSSTA)",
+          specialization: "Complex Survey Sampling, PPS, & Hansen-Hurwitz Multipliers",
+          avatar: "PS"
+        },
+        {
+          id: 2,
+          name: "Prof. K. R. Ramanathan",
+          designation: "Professor of Macroeconomic Accounting & Price Statistics",
+          department: "National Statistical Systems Training Academy (NSSTA)",
+          specialization: "System of National Accounts (SNA), Double Deflation, & CPI/WPI Formulation",
+          avatar: "KR"
+        },
+        {
+          id: 3,
+          name: "Dr. Ananya Sengupta",
+          designation: "Associate Professor & Lead AI/ML Instructor",
+          department: "NSSTA & IIT Delhi Collaborative Statistical Cell",
+          specialization: "Machine Learning Imputation, PySpark Big Data, & Spatial GIS",
+          avatar: "AS"
+        }
+      ]);
+    }
+
+    // 8d. Publish as Official Main Assessment
     if (url.includes('/mcq/publish-as-main-assessment')) {
       let b = {};
       try { b = JSON.parse(opts.body || '{}'); } catch(e){}
@@ -378,17 +595,19 @@
     }
 
     // 11. Multi-Level MCQ Quizzes
+    // 11. Multi-Level MCQ Quizzes (15 Questions: 5 Level 1, 5 Level 2, 5 Level 3 • 30 Mins)
     if (url.includes('/mcq/multilevel-quizzes')) {
       const multiQuizzes = [
         {
           id: 1,
-          title: "Multi-Level Assessment: Sampling Design & Price Statistics (NSSTA)",
+          title: "AI RAG Cadre Comprehensive Multi-Level Exam (15 MCQs • 30 Mins)",
           course_title: "Foundations of Sample Survey Design & NSS Methodologies",
           competency_name: "Sampling & Survey Design",
           passing_score: 70,
-          duration_minutes: 36,
-          total_questions: 6,
+          duration_minutes: 30,
+          total_questions: 15,
           questions: [
+            // LEVEL 1: FOUNDATIONAL / RECALL & DEFINITIONS (5 Questions)
             {
               id: 201,
               level: 1,
@@ -424,6 +643,59 @@
               explanation: "Official CPI compilation employs the modified Laspeyres formula, measuring the cost change over time of an itemized consumption basket fixed at the base year."
             },
             {
+              id: 207,
+              level: 1,
+              bloom_level: "Recall",
+              difficulty: "Easy",
+              source_reference: "NSSTA Guide Section 4.1 — Production Accounts & Output Valuation",
+              source_note_citation: "System of National Accounts Framework",
+              stem: "In the System of National Accounts (SNA), how is Gross Value Added (GVA) at Basic Prices formally defined?",
+              options: [
+                { key: "A", text: "Gross Output at basic prices minus Intermediate Consumption at purchasers' prices." },
+                { key: "B", text: "Gross Domestic Product (GDP) plus Net Product Taxes and Subsidies." },
+                { key: "C", text: "Total compensation of employees plus gross fixed capital depreciation only." },
+                { key: "D", text: "Final consumption expenditure plus net exports of goods and services." }
+              ],
+              correct: "A",
+              explanation: "GVA at basic prices measures the net value generated in production by subtracting intermediate consumption from total gross production output."
+            },
+            {
+              id: 208,
+              level: 1,
+              bloom_level: "Understanding",
+              difficulty: "Easy",
+              source_reference: "NSSTA Guide Section 6.1 — Introduction to Machine Learning in Official Statistics",
+              source_note_citation: "Cadre Data Science Handbook",
+              stem: "What is the key distinction between Supervised and Unsupervised Machine Learning when processing national census and survey data?",
+              options: [
+                { key: "A", text: "Supervised learning models predict known target outcomes from labeled training examples, whereas unsupervised learning identifies intrinsic patterns without ground-truth labels." },
+                { key: "B", text: "Supervised learning requires zero mathematical assumptions, whereas unsupervised learning requires linear normality." },
+                { key: "C", text: "Unsupervised learning is solely restricted to numerical regression models." },
+                { key: "D", text: "Supervised models cannot process tabular survey data." }
+              ],
+              correct: "A",
+              explanation: "Supervised algorithms map inputs to labeled outputs, while unsupervised methods discover natural groupings or clusters without labeled targets."
+            },
+            {
+              id: 209,
+              level: 1,
+              bloom_level: "Recall",
+              difficulty: "Easy",
+              source_reference: "NSSTA Guide Section 1.1 — Error Taxonomy in Official Statistical Surveys",
+              source_note_citation: "MoSPI Quality Framework Manual",
+              stem: "How is Sampling Error distinguished from Non-Sampling Error in official government sample surveys?",
+              options: [
+                { key: "A", text: "Sampling error arises solely from observing a sample rather than the complete population, whereas non-sampling error stems from measurement, coverage, non-response, and data entry defects." },
+                { key: "B", text: "Sampling error is present in a complete 100% census, while non-sampling error only exists in small samples." },
+                { key: "C", text: "Sampling error can never be quantified mathematically." },
+                { key: "D", text: "Non-sampling error decreases automatically to zero whenever sample size increases." }
+              ],
+              correct: "A",
+              explanation: "Sampling error is the mathematical variation inherent in probability sampling; non-sampling errors occur across all survey stages and affect both sample surveys and complete censuses."
+            },
+
+            // LEVEL 2: APPLIED / OPERATIONAL PROBLEM SOLVING (5 Questions)
+            {
               id: 203,
               level: 2,
               bloom_level: "Application",
@@ -458,6 +730,59 @@
               explanation: "Neyman allocation minimizes the overall variance of the estimator by allocating larger sample fractions to strata that are larger and exhibit higher internal variance."
             },
             {
+              id: 210,
+              level: 2,
+              bloom_level: "Application",
+              difficulty: "Medium",
+              source_reference: "NSSTA Guide Section 1.5 — Operational Field Design for Self-Weighting Samples",
+              source_note_citation: "Cadre Household Survey Manual",
+              stem: "In a nationwide socioeconomic survey, a state stratum contains rural villages of vastly disparate population counts. What is the optimal two-stage design to achieve self-weighting sample households?",
+              options: [
+                { key: "A", text: "Select First Stage Units (villages) with PPS systematic sampling, and select a fixed number of households (SSUs) via SRSWOR within each selected village." },
+                { key: "B", text: "Select villages with Simple Random Sampling and enumerate 100% of households in each chosen village." },
+                { key: "C", text: "Select both villages and households using non-probability purposive quota selection." },
+                { key: "D", text: "Select villages with PPS and choose an identical proportion of households in each village regardless of village size." }
+              ],
+              correct: "A",
+              explanation: "Selecting PSUs with PPS and taking a fixed sample size of SSUs per PSU yields an overall equal probability of selection for households, making the design self-weighting."
+            },
+            {
+              id: 211,
+              level: 2,
+              bloom_level: "Application",
+              difficulty: "Medium",
+              source_reference: "NSSTA Guide Section 2.4 — Substitution Bias and Chained Index Solutions",
+              source_note_citation: "Price Statistics Technical Directive",
+              stem: "When relative prices of mutton and chicken diverge sharply and consumers substitute towards cheaper chicken, how does the fixed-basket Laspeyres CPI behave relative to the true cost-of-living index?",
+              options: [
+                { key: "A", text: "It overstates the true cost of living increase because it holds consumption quantities rigidly fixed at base period preferences." },
+                { key: "B", text: "It understates the true inflation rate because it ignores intermediate goods." },
+                { key: "C", text: "It matches the true cost-of-living index perfectly through implicit geometric averaging." },
+                { key: "D", text: "It becomes negative due to downward commodity substitution." }
+              ],
+              correct: "A",
+              explanation: "The Laspeyres formula fails to account for consumer substitution toward relatively cheaper alternatives, leading to an upward substitution bias relative to the true Cost of Living Index."
+            },
+            {
+              id: 212,
+              level: 2,
+              bloom_level: "Application",
+              difficulty: "Medium",
+              source_reference: "NSSTA Guide Section 6.4 — Survey Resampling & Clustered Cross-Validation",
+              source_note_citation: "Official ML Analytics Guidelines",
+              stem: "When fitting a predictive gradient boosted model to classify informal household enterprise profitability, why must cross-validation folds be grouped at the Primary Sampling Unit (cluster) level rather than randomly split by household?",
+              options: [
+                { key: "A", text: "To prevent data leakage caused by spatial and socioeconomic correlation among households within the same cluster, preventing overly optimistic validation performance." },
+                { key: "B", text: "To ensure that all tree algorithms run in strictly polynomial time." },
+                { key: "C", text: "To eliminate the need for survey sampling weights in the loss function." },
+                { key: "D", text: "Because standard Python packages cannot execute random household splitting." }
+              ],
+              correct: "A",
+              explanation: "Clustered survey data exhibit intra-cluster correlation. Clustered CV prevents spatial leakage and provides realistic out-of-cluster generalization evaluation."
+            },
+
+            // LEVEL 3: ADVANCED / STRATEGIC ANALYTICAL EVALUATION (5 Questions)
+            {
               id: 205,
               level: 3,
               bloom_level: "Analysis",
@@ -490,6 +815,57 @@
               ],
               correct: "A",
               explanation: "Single deflation creates severe statistical distortions when input prices (energy, commodities) move differently from output prices. Double deflation correctly isolates genuine real volume change."
+            },
+            {
+              id: 213,
+              level: 3,
+              bloom_level: "Analysis",
+              difficulty: "Hard",
+              source_reference: "NSSTA Guide Section 1.8 — Complex Survey Variance Estimation & Deff Diagnostics",
+              source_note_citation: "Cadre Advanced Sampling Compendium",
+              stem: "A state statistical bureau plans a two-stage survey where the intra-class correlation rho = 0.18 for key welfare indicators. If the cluster sample size is increased from m = 8 to m = 20 households per village, what is the design impact on survey efficiency?",
+              options: [
+                { key: "A", text: "The Design Effect (Deff = 1 + (m-1)*rho) expands from 2.26 to 4.42, causing a severe penalty in effective sample size and requiring higher PSU dispersion instead." },
+                { key: "B", text: "The standard error decreases proportionally to sqrt(20/8) with zero variance inflation." },
+                { key: "C", text: "The Design Effect drops to zero because within-cluster sample size is larger." },
+                { key: "D", text: "Non-sampling errors are mathematically eliminated by higher cluster density." }
+              ],
+              correct: "A",
+              explanation: "Deff = 1 + (m - 1)*rho. When rho is positive (0.18), increasing m from 8 to 20 nearly doubles the design effect from 2.26 to 4.42, drastically degrading statistical efficiency per surveyed household."
+            },
+            {
+              id: 214,
+              level: 3,
+              bloom_level: "Analysis",
+              difficulty: "Hard",
+              source_reference: "NSSTA Guide Section 1.7 — Unequal Probability Theory & Horvitz-Thompson Variance",
+              source_note_citation: "Official Cadre Sampling Directives",
+              stem: "When evaluating unequal probability sampling without replacement (WOR) versus with replacement (WR), why is the Horvitz-Thompson estimator preferred over the Hansen-Hurwitz estimator?",
+              options: [
+                { key: "A", text: "Horvitz-Thompson operates on distinct units without replacement using first-order inclusion probabilities (pi_i), achieving substantially lower sampling variance by eliminating redundant sampling of identical units." },
+                { key: "B", text: "Hansen-Hurwitz is statistically invalid for all government surveys." },
+                { key: "C", text: "Horvitz-Thompson requires zero knowledge of unit inclusion probabilities." },
+                { key: "D", text: "Because without-replacement sampling always inflates standard errors proportionally to stratum size." }
+              ],
+              correct: "A",
+              explanation: "Sampling without replacement avoids resampling identical units. The Horvitz-Thompson estimator weighted by 1/pi_i delivers strictly lower variance than with-replacement Hansen-Hurwitz estimation under PPS."
+            },
+            {
+              id: 215,
+              level: 3,
+              bloom_level: "Analysis",
+              difficulty: "Hard",
+              source_reference: "NSSTA Guide Section 2.8 — Axiomatic and Economic Approaches to Superlative Indices",
+              source_note_citation: "Macroeconomic Price Statistics Division",
+              stem: "According to Diewert's superlative index theory, why are the Fisher Ideal and Törnqvist price indexes mathematically superior to the Laspeyres and Paasche formulas for official inflation tracking?",
+              options: [
+                { key: "A", text: "They represent flexible second-order approximations to an arbitrary twice-continuously differentiable true Cost of Living aggregator function, passing both time-reversal and factor-reversal axiomatic tests." },
+                { key: "B", text: "They completely avoid collecting commodity price quotations in rural markets." },
+                { key: "C", text: "They assume consumer price elasticity is zero across all expenditure classes." },
+                { key: "D", text: "They are arithmetic sums that can be computed without computer assistance." }
+              ],
+              correct: "A",
+              explanation: "Superlative indices treat base and current period consumer substitutions symmetrically, providing exact approximations to flexible utility aggregators and eliminating first-order substitution bias."
             }
           ]
         }
@@ -497,28 +873,39 @@
       return jsonResponse(multiQuizzes);
     }
 
-    // 12. Multi-Level Exam Submission
+    // 12. Multi-Level Exam Submission (15 Questions • 30 Mins)
     if (url.includes('/mcq/submit-multilevel-test')) {
       return jsonResponse({
         status: "SUCCESS",
         passed: true,
-        score_percentage: 83.3,
-        total_correct: 5,
-        total_questions: 6,
+        score_percentage: 86.7,
+        total_correct: 13,
+        total_questions: 15,
         passing_score: 70,
-        competency_gain: "+1 Level (Accredited on Competency Ledger)",
+        assessed_level: 3,
+        updated_competency_score: 88.5,
+        competency_gain: "+1 Level (Accredited on Official Cadre Competency Ledger)",
         level_breakdown: {
-          level_1: { correct: 2, total: 2, score_pct: 100 },
-          level_2: { correct: 2, total: 2, score_pct: 100 },
-          level_3: { correct: 1, total: 2, score_pct: 50 }
+          level_1: { correct: 5, total: 5, score_pct: 100 },
+          level_2: { correct: 4, total: 5, score_pct: 80 },
+          level_3: { correct: 4, total: 5, score_pct: 80 }
         },
         detailed_feedback: [
           { question_id: 201, is_correct: true, correct_answer: "A", explanation: "PPS allocates probability proportional to size, lowering aggregate variance." },
           { question_id: 202, is_correct: true, correct_answer: "A", explanation: "Official CPI is compiled via Modified Laspeyres formula with base basket weights." },
+          { question_id: 207, is_correct: true, correct_answer: "A", explanation: "GVA at basic prices is defined as Gross Output minus Intermediate Consumption." },
+          { question_id: 208, is_correct: true, correct_answer: "A", explanation: "Supervised models predict known labels while unsupervised finds hidden clusters." },
+          { question_id: 209, is_correct: true, correct_answer: "A", explanation: "Sampling error is mathematically quantified probability variation; non-sampling affects all stages." },
           { question_id: 203, is_correct: true, correct_answer: "A", explanation: "Hot-deck imputation in the same stratum prevents sample distortion." },
           { question_id: 204, is_correct: true, correct_answer: "A", explanation: "Neyman allocation distributes proportional to N_h * S_h." },
+          { question_id: 210, is_correct: true, correct_answer: "A", explanation: "PPS PSUs with fixed SSU take per PSU creates equal overall selection probability." },
+          { question_id: 211, is_correct: true, correct_answer: "A", explanation: "Fixed basket Laspeyres suffers from upward substitution bias." },
+          { question_id: 212, is_correct: false, correct_answer: "A", explanation: "Clustered CV avoids optimistic validation results from intra-cluster neighborhood correlation." },
           { question_id: 205, is_correct: true, correct_answer: "A", explanation: "Fay-Herriot EBLUP borrows auxiliary strength when domain sample RSE is high." },
-          { question_id: 206, is_correct: false, correct_answer: "A", explanation: "Double deflation separately deflates output and intermediate inputs to preserve real value added." }
+          { question_id: 206, is_correct: true, correct_answer: "A", explanation: "Double deflation separately deflates output and intermediate inputs to preserve real value added." },
+          { question_id: 213, is_correct: true, correct_answer: "A", explanation: "Design Effect Deff = 1 + (m-1)*rho expands severely when cluster take expands under positive rho." },
+          { question_id: 214, is_correct: true, correct_answer: "A", explanation: "Horvitz-Thompson without replacement avoids resampling identical units, minimizing variance." },
+          { question_id: 215, is_correct: false, correct_answer: "A", explanation: "Fisher and Törnqvist superlative indices pass time and factor reversal tests, eliminating substitution bias." }
         ]
       });
     }

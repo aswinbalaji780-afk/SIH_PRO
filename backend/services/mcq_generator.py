@@ -889,7 +889,7 @@ class AIMCQGenerator:
         material_id: Optional[int],
         course_id: Optional[int],
         levels: List[int] = [1, 2, 3],
-        count_per_level: int = 4,
+        count_per_level: int = 5,
         assessment_title: Optional[str] = None
     ) -> Dict[str, Any]:
         """
@@ -923,7 +923,7 @@ class AIMCQGenerator:
             course_id=course.id if course else None,
             level="Multi-Level (Levels 1, 2 & 3)",
             target_level=3,
-            duration_minutes=max(15, len(levels) * count_per_level * 3),
+            duration_minutes=30,
             passing_score=70.0,
             is_adaptive=True,
             is_published=True,

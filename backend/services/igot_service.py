@@ -42,7 +42,7 @@ class IGOTIntegrationService(CourseProvider):
                 "format": "Self-Paced e-Learning",
                 "rating": 4.9,
                 "description": "Comprehensive practical course covering probability sampling, stratified multi-stage design, sample size estimation, and sampling weight adjustments in NSS surveys.",
-                "external_url": "https://igotkarmayogi.gov.in/learn/course/IGOT-STAT-101",
+                "external_url": "https://igotkarmayogi.gov.in",
                 "prerequisites": ["Basic Statistics"],
                 "syllabus": [
                     "Module 1: Principles of Probability Sampling & NSSO Protocols",
@@ -66,7 +66,7 @@ class IGOTIntegrationService(CourseProvider):
                 "format": "Interactive Hands-on Lab",
                 "rating": 4.8,
                 "description": "In-depth training on Pandas, NumPy, statistical testing with SciPy, automated data cleaning pipelines for microdata, and standardizing data workflows.",
-                "external_url": "https://igotkarmayogi.gov.in/learn/course/IGOT-PY-201",
+                "external_url": "https://igotkarmayogi.gov.in",
                 "prerequisites": ["Python Fundamentals"],
                 "syllabus": [
                     "Module 1: Fast Vectorized Operations with Pandas and NumPy",
@@ -90,7 +90,7 @@ class IGOTIntegrationService(CourseProvider):
                 "format": "Blended with Virtual Lab",
                 "rating": 4.9,
                 "description": "Explores supervised/unsupervised algorithms, automated data imputation using ML, outlier detection in enterprise surveys, and predictive forecasting.",
-                "external_url": "https://igotkarmayogi.gov.in/learn/course/IGOT-AIML-301",
+                "external_url": "https://igotkarmayogi.gov.in",
                 "prerequisites": ["Python for Statistical Data Analysis & Automation"],
                 "syllabus": [
                     "Module 1: Machine Learning Foundations & Supervised Predictors",
@@ -114,7 +114,7 @@ class IGOTIntegrationService(CourseProvider):
                 "format": "Self-Paced e-Learning",
                 "rating": 4.7,
                 "description": "Government cloud infrastructure, data sovereignty, containerized deployment of statistical dashboards, and security governance.",
-                "external_url": "https://igotkarmayogi.gov.in/learn/course/IGOT-CLOUD-101",
+                "external_url": "https://igotkarmayogi.gov.in",
                 "prerequisites": [],
                 "syllabus": [
                     "Module 1: MeghRaj Architecture and Government Cloud Guidelines",
@@ -138,7 +138,7 @@ class IGOTIntegrationService(CourseProvider):
                 "format": "Interactive Geospatial Lab",
                 "rating": 4.8,
                 "description": "Geospatial mapping of agricultural and economic census data using QGIS, shapefiles, raster overlays, and satellite imagery cross-validation.",
-                "external_url": "https://igotkarmayogi.gov.in/learn/course/IGOT-GIS-101",
+                "external_url": "https://igotkarmayogi.gov.in",
                 "prerequisites": [],
                 "syllabus": [
                     "Module 1: Principles of Coordinate Reference Systems & Vector Layers",
@@ -162,7 +162,7 @@ class IGOTIntegrationService(CourseProvider):
                 "format": "Self-Paced e-Learning",
                 "rating": 4.9,
                 "description": "Compliance with the Digital Personal Data Protection Act, handling respondents' microdata, anonymization techniques, differential privacy, and audit compliance.",
-                "external_url": "https://igotkarmayogi.gov.in/learn/course/IGOT-SEC-201",
+                "external_url": "https://igotkarmayogi.gov.in",
                 "prerequisites": [],
                 "syllabus": [
                     "Module 1: DPDP Act 2023 Principles for Government Data Fiduciaries",

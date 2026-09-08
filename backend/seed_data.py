@@ -13,6 +13,261 @@ from backend.core.security import get_password_hash
 from backend.services.skill_gap_engine import SkillGapEngine
 from backend.services.recommendation_engine import HybridRecommendationEngine
 
+EXTENDED_COURSES_DATA = [
+    {
+        "id": "IGOT-STAT-101",
+        "title": "Sampling Methods & Survey Design for Official Statistics",
+        "provider": "iGOT Karmayogi & NSSTA",
+        "source": "iGOT Karmayogi",
+        "category": "Statistical Competencies",
+        "skill_level": "Intermediate",
+        "duration": 16.0,
+        "rating": 4.9,
+        "url": "https://igotkarmayogi.gov.in",
+        "desc": "Practical course covering probability sampling, stratified multi-stage design, sample size estimation, and sampling weights.",
+        "comp_code": "SAMPLING",
+        "gain": 20.0
+    },
+    {
+        "id": "IGOT-PY-201",
+        "title": "Python for Statistical Data Analysis & Automation",
+        "provider": "iGOT Karmayogi (MoSPI Cadre)",
+        "source": "iGOT Karmayogi",
+        "category": "Technical Competencies",
+        "skill_level": "Intermediate",
+        "duration": 20.0,
+        "rating": 4.8,
+        "url": "https://igotkarmayogi.gov.in",
+        "desc": "Hands-on training on Pandas, NumPy, statistical testing with SciPy, automated data cleaning pipelines, and standardizing data workflows.",
+        "comp_code": "PYTHON",
+        "gain": 25.0
+    },
+    {
+        "id": "IGOT-AIML-301",
+        "title": "Applied Machine Learning for Official Statistics",
+        "provider": "iGOT Karmayogi & IIT Partner",
+        "source": "iGOT Karmayogi",
+        "category": "Technical Competencies",
+        "skill_level": "Advanced",
+        "duration": 24.0,
+        "rating": 4.9,
+        "url": "https://igotkarmayogi.gov.in",
+        "desc": "Explores supervised/unsupervised algorithms, automated data imputation using ML, outlier detection in enterprise surveys, and predictive forecasting.",
+        "comp_code": "AI_ML",
+        "gain": 35.0
+    },
+    {
+        "id": "IGOT-CLOUD-101",
+        "title": "Government Cloud (MeghRaj) & Secure Data Architecture",
+        "provider": "iGOT Karmayogi & MeitY",
+        "source": "iGOT Karmayogi",
+        "category": "Digital Governance",
+        "skill_level": "Basic",
+        "duration": 12.0,
+        "rating": 4.7,
+        "url": "https://igotkarmayogi.gov.in",
+        "desc": "Government cloud infrastructure, data sovereignty, containerized deployment of statistical dashboards, and security governance.",
+        "comp_code": "CLOUD",
+        "gain": 25.0
+    },
+    {
+        "id": "IGOT-GIS-101",
+        "title": "Spatial Analysis & GIS for Survey Disaggregation",
+        "provider": "iGOT Karmayogi & ISRO / NRSC",
+        "source": "iGOT Karmayogi",
+        "category": "Technical Competencies",
+        "skill_level": "Basic",
+        "duration": 14.0,
+        "rating": 4.8,
+        "url": "https://igotkarmayogi.gov.in",
+        "desc": "Geospatial mapping of agricultural and economic census data using QGIS, shapefiles, raster overlays, and satellite imagery cross-validation.",
+        "comp_code": "GIS",
+        "gain": 20.0
+    },
+    {
+        "id": "NSSTA-TPAC-01",
+        "title": "Advanced Survey Methodology & National Accounts Compilation",
+        "provider": "NSSTA TPAC 2026",
+        "source": "NSSTA TPAC",
+        "category": "Statistical Competencies",
+        "skill_level": "Advanced",
+        "duration": 30.0,
+        "rating": 4.95,
+        "url": "https://nssta.gov.in/tpac/programmes/2026-01",
+        "desc": "5-day residential executive training at NSSTA Greater Noida covering advanced sampling design, non-response weighting, and supply-use tables.",
+        "comp_code": "SAMPLING",
+        "gain": 25.0
+    },
+    {
+        "id": "IGOT-NAC-401",
+        "title": "System of National Accounts (SNA 2008) & Supply-Use Tables (SUT)",
+        "provider": "iGOT Karmayogi & CSO",
+        "source": "iGOT Karmayogi",
+        "category": "Statistical Competencies",
+        "skill_level": "Advanced",
+        "duration": 22.0,
+        "rating": 4.9,
+        "url": "https://igotkarmayogi.gov.in",
+        "desc": "Comprehensive framework of SNA 2008, GVA estimation across primary/secondary sectors, input-output balance, and macroeconomic accounts compilation.",
+        "comp_code": "NAT_ACCOUNTS",
+        "gain": 30.0
+    },
+    {
+        "id": "IGOT-SQL-201",
+        "title": "Enterprise SQL & Microdata Warehousing for National Surveys",
+        "provider": "iGOT Karmayogi & NIC",
+        "source": "iGOT Karmayogi",
+        "category": "Technical Competencies",
+        "skill_level": "Intermediate",
+        "duration": 18.0,
+        "rating": 4.85,
+        "url": "https://igotkarmayogi.gov.in",
+        "desc": "Advanced SQL queries, window functions, relational database architecture, and performance tuning for querying massive microdata repositories.",
+        "comp_code": "SQL",
+        "gain": 25.0
+    },
+    {
+        "id": "IGOT-VIZ-301",
+        "title": "Statistical Data Visualization, Power BI & Official Dashboards",
+        "provider": "iGOT Karmayogi & DAID",
+        "source": "iGOT Karmayogi",
+        "category": "Technical Competencies",
+        "skill_level": "Intermediate",
+        "duration": 16.0,
+        "rating": 4.8,
+        "url": "https://igotkarmayogi.gov.in",
+        "desc": "Design of public-facing statistical dissemination dashboards, interactive choropleth maps, and MoSPI KPI cards using modern BI tools.",
+        "comp_code": "DATA_VIZ",
+        "gain": 25.0
+    },
+    {
+        "id": "IGOT-SEC-301",
+        "title": "Data Governance, Cybersecurity & DPDP Act Compliance in Official Cadres",
+        "provider": "iGOT Karmayogi & CERT-In",
+        "source": "iGOT Karmayogi",
+        "category": "Digital Governance",
+        "skill_level": "Advanced",
+        "duration": 15.0,
+        "rating": 4.75,
+        "url": "https://igotkarmayogi.gov.in",
+        "desc": "Sovereign microdata protection, anonymization techniques, role-based access control (RBAC), and compliance with the Digital Personal Data Protection Act.",
+        "comp_code": "CYBERSECURITY",
+        "gain": 25.0
+    },
+    {
+        "id": "IGOT-COMM-401",
+        "title": "Executive Statistical Communication & Parliamentary Brief Formulation",
+        "provider": "NSSTA & IIM Partner",
+        "source": "iGOT Karmayogi",
+        "category": "Executive Cadre",
+        "skill_level": "Advanced",
+        "duration": 14.0,
+        "rating": 4.9,
+        "url": "https://igotkarmayogi.gov.in",
+        "desc": "Formulating high-impact cabinet notes, press releases, parliamentary Q&A briefings, and communicating complex probabilistic metrics to senior leadership.",
+        "comp_code": "COMMUNICATION",
+        "gain": 25.0
+    },
+    {
+        "id": "NSSTA-EXEC-01",
+        "title": "Strategic Leadership & Cadre Governance for Indian Statistical Service",
+        "provider": "NSSTA Apex Leadership Programme",
+        "source": "NSSTA TPAC",
+        "category": "Executive Leadership",
+        "skill_level": "Advanced",
+        "duration": 36.0,
+        "rating": 4.98,
+        "url": "https://nssta.gov.in/tpac/programmes/2026-exec",
+        "desc": "Executive cadre leadership program for Joint Directors and Directors covering modernization of national statistical systems, inter-ministerial data coordination, and AI adoption.",
+        "comp_code": "COMMUNICATION",
+        "gain": 35.0
+    },
+    {
+        "id": "IGOT-AIML-401",
+        "title": "Generative AI & LLMs for Automated Statistical Metadata Extraction",
+        "provider": "iGOT Karmayogi & IIT Bombay",
+        "source": "iGOT Karmayogi",
+        "category": "Technical Competencies",
+        "skill_level": "Advanced",
+        "duration": 20.0,
+        "rating": 4.92,
+        "url": "https://igotkarmayogi.gov.in",
+        "desc": "Cutting-edge techniques in retrieval-augmented generation (RAG), automated survey questionnaire parsing, and synthetic data generation under privacy constraints.",
+        "comp_code": "AI_ML",
+        "gain": 30.0
+    },
+    {
+        "id": "NSSTA-TPAC-02",
+        "title": "Price Statistics, CPI Basket Revisions & Hedonic Quality Adjustments",
+        "provider": "NSSTA Greater Noida & ESD",
+        "source": "NSSTA TPAC",
+        "category": "Statistical Competencies",
+        "skill_level": "Advanced",
+        "duration": 24.0,
+        "rating": 4.88,
+        "url": "https://nssta.gov.in/tpac/programmes/2026-cpi",
+        "desc": "In-depth workshop on modernizing price collection, web scraping for CPI items, geometric mean formulas, and Laspeyres-to-Fisher chain-linking.",
+        "comp_code": "NAT_ACCOUNTS",
+        "gain": 25.0
+    },
+    {
+        "id": "IGOT-BIGD-301",
+        "title": "Big Data Engineering with PySpark for Census & Enterprise Surveys",
+        "provider": "iGOT Karmayogi & C-DAC",
+        "source": "iGOT Karmayogi",
+        "category": "Technical Competencies",
+        "skill_level": "Advanced",
+        "duration": 28.0,
+        "rating": 4.85,
+        "url": "https://igotkarmayogi.gov.in",
+        "desc": "Distributed data processing with Apache Spark and PySpark, handling multi-terabyte survey rounds, cluster provisioning, and parquet file optimizations.",
+        "comp_code": "PYTHON",
+        "gain": 30.0
+    }
+]
+
+def sync_extended_courses(db: Session):
+    """
+    Ensures all extended iGOT & NSSTA courses and their competency mappings are present in DB.
+    """
+    comp_map = {c.code: c for c in db.query(Competency).all()}
+    existing_courses = {c.course_id: c for c in db.query(Course).all()}
+    added = 0
+
+    for c in EXTENDED_COURSES_DATA:
+        if c["id"] not in existing_courses:
+            course = Course(
+                course_id=c["id"],
+                title=c["title"],
+                description=c["desc"],
+                provider=c["provider"],
+                source=c["source"],
+                category=c["category"],
+                skill_level=c["skill_level"],
+                duration_hours=c["duration"],
+                language="English / Hindi",
+                format="Blended / Self-Paced",
+                rating=c["rating"],
+                external_url=c["url"]
+            )
+            db.add(course)
+            db.flush()
+            existing_courses[c["id"]] = course
+            added += 1
+
+            if c.get("comp_code") in comp_map:
+                cc = CourseCompetency(
+                    course_id=course.id,
+                    competency_id=comp_map[c["comp_code"]].id,
+                    target_level=4 if c["skill_level"] == "Advanced" else 3,
+                    target_score_gain=c["gain"]
+                )
+                db.add(cc)
+
+    if added > 0:
+        db.commit()
+        print(f"Successfully synced {added} new official courses into database.")
+
 def seed_database(force: bool = False):
     db: Session = SessionLocal()
     try:
@@ -25,7 +280,8 @@ def seed_database(force: bool = False):
 
         # Check if already seeded
         if not force and db.query(User).first():
-            print("Database already contains data. Skipping initial seeding.")
+            print("Database already contains data. Ensuring extended courses are synced...")
+            sync_extended_courses(db)
             return
 
         print("Seeding new database with official cadres, competencies, and learning catalog...")
@@ -455,92 +711,7 @@ def seed_database(force: bool = False):
         # 6. Courses Catalogue (iGOT & NSSTA)
         # -------------------------------------------------------------
         print("Seeding Course Catalogue...")
-        courses_data = [
-            {
-                "id": "IGOT-STAT-101",
-                "title": "Sampling Methods & Survey Design for Official Statistics",
-                "provider": "iGOT Karmayogi & NSSTA",
-                "source": "iGOT Karmayogi",
-                "category": "Statistical Competencies",
-                "skill_level": "Intermediate",
-                "duration": 16.0,
-                "rating": 4.9,
-                "url": "https://igotkarmayogi.gov.in/learn/course/IGOT-STAT-101",
-                "desc": "Practical course covering probability sampling, stratified multi-stage design, sample size estimation, and sampling weights.",
-                "comp_code": "SAMPLING",
-                "gain": 20.0
-            },
-            {
-                "id": "IGOT-PY-201",
-                "title": "Python for Statistical Data Analysis & Automation",
-                "provider": "iGOT Karmayogi (MoSPI Cadre)",
-                "source": "iGOT Karmayogi",
-                "category": "Technical Competencies",
-                "skill_level": "Intermediate",
-                "duration": 20.0,
-                "rating": 4.8,
-                "url": "https://igotkarmayogi.gov.in/learn/course/IGOT-PY-201",
-                "desc": "Hands-on training on Pandas, NumPy, statistical testing with SciPy, automated data cleaning pipelines, and standardizing data workflows.",
-                "comp_code": "PYTHON",
-                "gain": 25.0
-            },
-            {
-                "id": "IGOT-AIML-301",
-                "title": "Applied Machine Learning for Official Statistics",
-                "provider": "iGOT Karmayogi & IIT Partner",
-                "source": "iGOT Karmayogi",
-                "category": "Technical Competencies",
-                "skill_level": "Advanced",
-                "duration": 24.0,
-                "rating": 4.9,
-                "url": "https://igotkarmayogi.gov.in/learn/course/IGOT-AIML-301",
-                "desc": "Explores supervised/unsupervised algorithms, automated data imputation using ML, outlier detection in enterprise surveys, and predictive forecasting.",
-                "comp_code": "AI_ML",
-                "gain": 35.0
-            },
-            {
-                "id": "IGOT-CLOUD-101",
-                "title": "Government Cloud (MeghRaj) & Secure Data Architecture",
-                "provider": "iGOT Karmayogi & MeitY",
-                "source": "iGOT Karmayogi",
-                "category": "Digital Governance",
-                "skill_level": "Basic",
-                "duration": 12.0,
-                "rating": 4.7,
-                "url": "https://igotkarmayogi.gov.in/learn/course/IGOT-CLOUD-101",
-                "desc": "Government cloud infrastructure, data sovereignty, containerized deployment of statistical dashboards, and security governance.",
-                "comp_code": "CLOUD",
-                "gain": 25.0
-            },
-            {
-                "id": "IGOT-GIS-101",
-                "title": "Spatial Analysis & GIS for Survey Disaggregation",
-                "provider": "iGOT Karmayogi & ISRO / NRSC",
-                "source": "iGOT Karmayogi",
-                "category": "Technical Competencies",
-                "skill_level": "Basic",
-                "duration": 14.0,
-                "rating": 4.8,
-                "url": "https://igotkarmayogi.gov.in/learn/course/IGOT-GIS-101",
-                "desc": "Geospatial mapping of agricultural and economic census data using QGIS, shapefiles, raster overlays, and satellite imagery cross-validation.",
-                "comp_code": "GIS",
-                "gain": 20.0
-            },
-            {
-                "id": "NSSTA-TPAC-01",
-                "title": "Advanced Survey Methodology & National Accounts Compilation",
-                "provider": "NSSTA TPAC 2026",
-                "source": "NSSTA TPAC",
-                "category": "Statistical Competencies",
-                "skill_level": "Advanced",
-                "duration": 30.0,
-                "rating": 4.95,
-                "url": "https://nssta.gov.in/tpac/programmes/2026-01",
-                "desc": "5-day residential executive training at NSSTA Greater Noida covering advanced sampling design, non-response weighting, and supply-use tables.",
-                "comp_code": "SAMPLING",
-                "gain": 25.0
-            }
-        ]
+        courses_data = EXTENDED_COURSES_DATA
 
         course_objs = {}
         for c in courses_data:
@@ -563,13 +734,14 @@ def seed_database(force: bool = False):
             course_objs[c["id"]] = course
 
             # Map to competency
-            cc = CourseCompetency(
-                course_id=course.id,
-                competency_id=comp_objs[c["comp_code"]].id,
-                target_level=3,
-                target_score_gain=c["gain"]
-            )
-            db.add(cc)
+            if c.get("comp_code") in comp_objs:
+                cc = CourseCompetency(
+                    course_id=course.id,
+                    competency_id=comp_objs[c["comp_code"]].id,
+                    target_level=4 if c["skill_level"] == "Advanced" else 3,
+                    target_score_gain=c["gain"]
+                )
+                db.add(cc)
 
         # -------------------------------------------------------------
         # 7. Learning Materials & RAG Document Store
