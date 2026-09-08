@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0c2340">
+  <meta name="description" content="AI-Enabled Competency Assessment, Skill Gap Analysis & Capacity Building — Mobile App">
+  <title>SkillIntel Mobile | MoSPI - NSSTA - iGOT</title>
+  <link rel="manifest" href="/mobile/manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/mobile/styles.css?v=1.0.0">
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- AUTH SCREEN (Login / Register)         -->
+  <!-- ═══════════════════════════════════════ -->
+  <div id="auth-screen" class="auth-screen">
+    <div class="auth-card anim-in">
+      <div class="auth-emblem">🇮🇳</div>
+      <h1 class="auth-title">National Skill Intelligence</h1>
+      <p class="auth-subtitle">MoSPI · NSSTA · iGOT Karmayogi — Mobile Portal</p>
+
+      <div id="auth-tabs" style="display:flex; gap:0; margin-bottom:18px; border-radius:10px; overflow:hidden; border:1.5px solid #e2e8f0;">
+        <button onclick="setMobileAuthMode('login')" id="m-tab-login" style="flex:1; padding:10px; font-size:0.72rem; font-weight:800; border:none; cursor:pointer; background:#0c2340; color:#fff;">Sign In</button>
+        <button onclick="setMobileAuthMode('register')" id="m-tab-register" style="flex:1; padding:10px; font-size:0.72rem; font-weight:800; border:none; cursor:pointer; background:#fff; color:#64748b;">Register</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="m-form-login" onsubmit="mobileLogin(event)">
+        <label class="m-label">Official Username</label>
+        <input id="m-login-user" class="m-input mb-3" type="text" placeholder="e.g. arun.kumar" value="arun.kumar" autocomplete="username">
+        <label class="m-label">Password</label>
+        <input id="m-login-pass" class="m-input mb-3" type="password" placeholder="Enter password" value="password123" autocomplete="current-password">
+        <button type="submit" class="btn btn-primary btn-full mt-2">🔐 Sign In to Cadre Portal</button>
+        <button type="button" onclick="mobileQuickLogin()" class="btn btn-outline btn-full mt-2" style="font-size:0.68rem;">⚡ Quick Demo: Officer Arun Kumar</button>
+      </form>
+
+      <!-- Register Form (hidden) -->
+      <form id="m-form-register" class="hidden" onsubmit="mobileRegister(event)">
+        <label class="m-label">Full Name</label>
+        <input id="m-reg-name" class="m-input mb-3" type="text" placeholder="Full official name">
+        <label class="m-label">Username</label>
+        <input id="m-reg-user" class="m-input mb-3" type="text" placeholder="Choose username">
+        <label class="m-label">Email</label>
+        <input id="m-reg-email" class="m-input mb-3" type="email" placeholder="Official email">
+        <label class="m-label">Password</label>
+        <input id="m-reg-pass" class="m-input mb-3" type="password" placeholder="Create password">
+        <button type="submit" class="btn btn-emerald btn-full mt-2">📋 Register Official Profile</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- MAIN APP SHELL                         -->
+  <!-- ═══════════════════════════════════════ -->
+  <div id="app-shell" class="hidden">
+
+    <!-- Top Navigation Bar -->
+    <nav class="top-nav">
+      <div class="nav-brand">
+        <span class="emblem">🇮🇳</span>
+        <div>
+          <div class="title">Skill Intelligence</div>
+          <div class="subtitle" id="nav-user-name">MoSPI · NSSTA · iGOT</div>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <button onclick="toggleMobileTheme()" id="m-theme-btn" title="Toggle Theme">🌙</button>
+        <button onclick="mobileLogout()" title="Logout">🚪</button>
+      </div>
+    </nav>
+
+    <!-- Main Scrollable Content Area -->
+    <main class="app-content" id="m-content">
+      <div class="spinner"></div>
+    </main>
+
+    <!-- Bottom Tab Navigation -->
+    <nav class="bottom-nav" id="m-bottom-nav">
+      <button class="tab-item active" onclick="mobileNav('dashboard')" data-tab="dashboard">
+        <span class="tab-icon">📊</span>
+        <span>Home</span>
+      </button>
+      <button class="tab-item" onclick="mobileNav('skill_gaps')" data-tab="skill_gaps">
+        <span class="tab-icon">🎯</span>
+        <span>Gaps</span>
+      </button>
+      <button class="tab-item" onclick="mobileNav('learning_paths')" data-tab="learning_paths">
+        <span class="tab-icon">🗺️</span>
+        <span>Roadmap</span>
+      </button>
+      <button class="tab-item" onclick="mobileNav('courses')" data-tab="courses">
+        <span class="tab-icon">📚</span>
+        <span>Courses</span>
+      </button>
+      <button class="tab-item" onclick="mobileNav('exam')" data-tab="exam">
+        <span class="tab-icon">📝</span>
+        <span>Exam</span>
+      </button>
+    </nav>
+
+    <!-- Floating Voice Copilot Assistant Button -->
+    <button onclick="toggleMobileCopilot()" class="mobile-copilot-fab" id="m-copilot-fab" title="Voice AI Assistant">
+      🎙️
+    </button>
+  </div>
+
+  <!-- Mobile Voice Copilot Drawer -->
+  <div id="m-copilot-drawer" class="mobile-copilot-drawer hidden" onclick="if(event.target===this) toggleMobileCopilot(false)">
+    <div class="mobile-copilot-panel">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:1.3rem;">🤖🎙️</span>
+          <div>
+            <div style="font-size:0.85rem; font-weight:900; color:#0f172a;">MoSPI AI Voice Assistant</div>
+            <div style="font-size:0.62rem; color:#64748b;">Cadre Competencies & Statistical Inquiries</div>
+          </div>
+        </div>
+        <button onclick="toggleMobileCopilot(false)" style="background:none; border:none; font-size:1.1rem; cursor:pointer; color:#64748b;">✕</button>
+      </div>
+
+      <!-- Messages Stream -->
+      <div id="m-copilot-messages" style="flex:1; overflow-y:auto; max-height:45vh; display:flex; flex-direction:column; gap:8px; margin-bottom:12px; font-size:0.75rem;">
+        <div class="m-card" style="padding:10px; background:#eff6ff; border-color:#bfdbfe; margin-bottom:0;">
+          <b>Namaste Officer!</b> I can assist you with your cadre competencies, iGOT courses, study hour allocation, or statistical surveys. Tap the mic below to speak.
+        </div>
+      </div>
+
+      <!-- Voice & Text Input Form -->
+      <form onsubmit="handleMobileCopilotSubmit(event)" style="display:flex; gap:8px; align-items:center;">
+        <input type="text" id="m-copilot-input" placeholder="Ask or speak your question..." class="m-input" style="flex:1; font-size:0.75rem; margin-bottom:0;">
+        <button type="button" onclick="toggleMobileVoiceInput()" id="m-copilot-mic-btn" style="width:40px; height:40px; border-radius:10px; border:none; background:#0c2340; color:#fff; font-size:1.1rem; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+          🎙️
+        </button>
+        <button type="submit" class="btn btn-primary" style="padding:10px 14px; font-size:0.75rem;">
+          Send
+        </button>
+      </form>
+      <div id="m-copilot-listening-bar" class="hidden" style="margin-top:6px; font-size:0.65rem; color:#dc2626; font-weight:700; display:flex; align-items:center; gap:6px;">
+        <span style="width:6px; height:6px; border-radius:50%; background:#dc2626; display:inline-block;" class="pulse-soft"></span>
+        <span>Microphone Active: Listening to your query...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="m-toast" class="m-toast">
+    <span id="m-toast-icon">✅</span>
+    <span id="m-toast-msg">Action completed</span>
+  </div>
+
+  <script src="/mobile/app.js?v=1.0.1"></script>
+</body>
+</html>

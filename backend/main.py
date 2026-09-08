@@ -69,6 +69,11 @@ if os.path.exists(frontend_dir):
             return FileResponse(index_file)
         return JSONResponse({"message": "Platform API running. Frontend static directory initializing."})
 
+# Mobile PWA Mount (html=True auto-serves index.html at /mobile/)
+mobile_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "mobile")
+if os.path.exists(mobile_dir):
+    app.mount("/mobile", StaticFiles(directory=mobile_dir, html=True), name="mobile")
+
 @app.on_event("startup")
 def startup_event():
     # Ensure database tables and initial seed data are populated

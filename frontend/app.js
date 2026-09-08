@@ -2674,6 +2674,44 @@ function renderPreExamLaunchModalHTML() {
                 </div>
               </div>
             </div>
+
+            <!-- Hardware Sensor Diagnostic & Mic Permission Test -->
+            <div id="pre-exam-media-perm-box" class="mt-3 p-3.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2.5">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div class="flex items-center space-x-2.5">
+                  <span class="text-xl">🎙️</span>
+                  <div>
+                    <h4 class="font-bold text-xs text-govNavy-900 dark:text-slate-100 flex items-center space-x-1.5">
+                      <span>Official Invigilation Microphone & Camera Sensor Check</span>
+                      <span class="text-[9px] bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-mono px-1.5 py-0.2 rounded font-bold">REQUIRED</span>
+                    </h4>
+                    <p class="text-[10px] text-slate-500 dark:text-slate-400">Under MoSPI assessment standards, candidate audio stream & webcam must be verified.</p>
+                  </div>
+                </div>
+                <button type="button" onclick="testMediaPermissionsInModal()" id="btn-pre-exam-perm" class="px-3.5 py-2 bg-govNavy-800 hover:bg-govNavy-700 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1.5 shadow-xs cursor-pointer shrink-0">
+                  <i data-lucide="mic" class="w-3.5 h-3.5"></i>
+                  <span id="btn-pre-exam-perm-text">Grant & Test Microphone</span>
+                </button>
+              </div>
+              
+              <div id="pre-exam-perm-status-row" class="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
+                <span id="perm-badge-mic" class="${mcqState.isMicActive ? 'px-2 py-0.5 rounded-full font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800' : 'px-2 py-0.5 rounded-full font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800'} flex items-center space-x-1">
+                  <span>${mcqState.isMicActive ? '🎙️ Mic: Access Granted & Verified' : '🎙️ Mic: Permission Pending'}</span>
+                </span>
+                <span id="perm-badge-cam" class="${mcqState.isCameraActive ? 'px-2 py-0.5 rounded-full font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800' : 'px-2 py-0.5 rounded-full font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800'} flex items-center space-x-1">
+                  <span>${mcqState.isCameraActive ? '📷 Cam: Access Granted & Live' : '📷 Cam: Permission Pending'}</span>
+                </span>
+                <div id="pre-exam-audio-meter" class="${mcqState.isMicActive ? 'flex' : 'hidden'} items-center space-x-1 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded-md border border-slate-200 dark:border-slate-700">
+                  <span class="text-[10px] text-slate-500 font-mono">Live Mic Level:</span>
+                  <div class="flex items-end space-x-0.5 h-3">
+                    <div class="exam-mic-bar w-1 bg-emerald-500 rounded-xs h-1 transition-all"></div>
+                    <div class="exam-mic-bar w-1 bg-emerald-500 rounded-xs h-2 transition-all"></div>
+                    <div class="exam-mic-bar w-1 bg-emerald-500 rounded-xs h-1.5 transition-all"></div>
+                    <div class="exam-mic-bar w-1 bg-emerald-500 rounded-xs h-2.5 transition-all"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -3154,6 +3192,164 @@ function stopCameraProctoring() {
   mcqState.micDenied = false;
   const floatingWidget = document.getElementById('exam-floating-proctor-widget');
   if (floatingWidget) floatingWidget.remove();
+}
+
+// ─────────────────────────────────────────────────────────────
+// Hardware Diagnostic & Microphone Permission Pre-Exam Check
+// ─────────────────────────────────────────────────────────────
+async function testMediaPermissionsInModal() {
+  const btn = document.getElementById('btn-pre-exam-perm');
+  const btnText = document.getElementById('btn-pre-exam-perm-text');
+  const micBadge = document.getElementById('perm-badge-mic');
+  const camBadge = document.getElementById('perm-badge-cam');
+  const audioMeter = document.getElementById('pre-exam-audio-meter');
+
+  if (btnText) btnText.textContent = "Connecting Sensors...";
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: { width: { ideal: 320 }, height: { ideal: 240 }, facingMode: "user" }
+    });
+
+    mcqState.cameraStream = stream;
+    mcqState.isCameraActive = true;
+    mcqState.isMicActive = true;
+    mcqState.cameraDenied = false;
+    mcqState.micDenied = false;
+
+    setupMicAudioMeter(stream);
+
+    if (micBadge) {
+      micBadge.className = "px-2 py-0.5 rounded-full font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 flex items-center space-x-1";
+      micBadge.innerHTML = "<span>🎙️ Mic: Access Granted & Live</span>";
+    }
+    if (camBadge) {
+      camBadge.className = "px-2 py-0.5 rounded-full font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 flex items-center space-x-1";
+      camBadge.innerHTML = "<span>📷 Cam: Access Granted & Live</span>";
+    }
+    if (audioMeter) audioMeter.classList.remove('hidden');
+
+    if (btn) {
+      btn.className = "px-3.5 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-xs cursor-default";
+      if (btnText) btnText.textContent = "✅ Sensors Verified & Ready";
+    }
+
+    showToast("✅ Microphone & Camera Verified: Audio & Video streams active for AI invigilation!");
+  } catch (err) {
+    console.warn("Media permissions prompt rejected or not found:", err);
+    if (micBadge) {
+      micBadge.className = "px-2 py-0.5 rounded-full font-bold bg-red-100 dark:bg-red-950/60 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-800";
+      micBadge.innerHTML = "<span>⚠️ Mic: Permission Needed</span>";
+    }
+    if (camBadge) {
+      camBadge.className = "px-2 py-0.5 rounded-full font-bold bg-red-100 dark:bg-red-950/60 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-800";
+      camBadge.innerHTML = "<span>⚠️ Cam: Permission Needed</span>";
+    }
+    if (btn && btnText) {
+      btn.className = "px-3.5 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-xs cursor-pointer";
+      btnText.textContent = "Retry Mic Permission";
+    }
+    showToast("⚠️ Microphone & Camera permission required. Please allow access in browser URL lock icon.");
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// MoSPI Copilot Voice Dictation & Microphone Speech-to-Text
+// ─────────────────────────────────────────────────────────────
+let speechRecognitionInstance = null;
+let isVoiceRecording = false;
+
+function toggleVoiceInput(event) {
+  if (event) event.preventDefault();
+  if (isVoiceRecording) {
+    stopVoiceInput();
+    return;
+  }
+  startVoiceInput();
+}
+
+function startVoiceInput() {
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const statusIndicator = document.getElementById('voice-status-indicator');
+  const voiceBtn = document.getElementById('voice-input-btn');
+  const chatInput = document.getElementById('chat-input');
+
+  if (SpeechRec) {
+    try {
+      speechRecognitionInstance = new SpeechRec();
+      speechRecognitionInstance.continuous = false;
+      speechRecognitionInstance.interimResults = true;
+      speechRecognitionInstance.lang = 'en-IN'; // Indian English / Official Cadre
+
+      speechRecognitionInstance.onstart = function() {
+        isVoiceRecording = true;
+        if (statusIndicator) statusIndicator.classList.remove('hidden');
+        if (voiceBtn) {
+          voiceBtn.className = "p-2 bg-red-600 text-white rounded-lg transition flex items-center justify-center cursor-pointer animate-pulse";
+        }
+        showToast("🎙️ Microphone Active: Speak your question now...");
+      };
+
+      speechRecognitionInstance.onresult = function(event) {
+        let transcript = "";
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          transcript += event.results[i][0].transcript;
+        }
+        if (chatInput && transcript) {
+          chatInput.value = transcript;
+        }
+      };
+
+      speechRecognitionInstance.onerror = function(err) {
+        console.warn("Speech recognition error:", err);
+        stopVoiceInput();
+        if (err.error === 'not-allowed') {
+          showToast("⚠️ Microphone permission was denied. Please allow microphone access in browser settings.");
+        } else {
+          showToast(`🎙️ Voice input notice: ${err.error || 'Check microphone'}`);
+        }
+      };
+
+      speechRecognitionInstance.onend = function() {
+        stopVoiceInput();
+        if (chatInput && chatInput.value.trim().length > 0) {
+          showToast("✅ Voice captured! Press Enter or Send to consult MoSPI AI Copilot.");
+        }
+      };
+
+      speechRecognitionInstance.start();
+    } catch (e) {
+      console.warn("Could not start SpeechRecognition:", e);
+      fallbackMicTest();
+    }
+  } else {
+    fallbackMicTest();
+  }
+}
+
+async function fallbackMicTest() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    showToast("🎙️ Microphone connected! Audio stream permission is active.");
+    stream.getTracks().forEach(t => t.stop());
+  } catch (err) {
+    showToast("⚠️ Microphone access required. Please click the lock icon in your URL bar to allow microphone.");
+  }
+}
+
+function stopVoiceInput() {
+  isVoiceRecording = false;
+  const statusIndicator = document.getElementById('voice-status-indicator');
+  const voiceBtn = document.getElementById('voice-input-btn');
+  if (statusIndicator) statusIndicator.classList.add('hidden');
+  if (voiceBtn) {
+    voiceBtn.className = "p-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg transition flex items-center justify-center cursor-pointer";
+  }
+  if (speechRecognitionInstance) {
+    try { speechRecognitionInstance.stop(); } catch (e) {}
+    speechRecognitionInstance = null;
+  }
 }
 
 async function startOfficialExam() {

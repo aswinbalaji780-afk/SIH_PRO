@@ -505,13 +505,23 @@
     </div>
 
     <!-- Input Bar -->
-    <div class="p-3 border-t border-slate-200 bg-white">
+    <div class="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
       <form onsubmit="handleChatSubmit(event)" class="flex items-center space-x-2">
-        <input type="text" id="chat-input" placeholder="Ask about competencies, courses, or concepts..." class="flex-1 px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-govNavy-700">
-        <button type="submit" class="p-2 bg-govNavy-800 text-white rounded-lg hover:bg-govNavy-700 transition">
+        <input type="text" id="chat-input" placeholder="Ask about competencies, courses, or concepts..." class="flex-1 px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-1 focus:ring-govNavy-700">
+        <button type="button" onclick="toggleVoiceInput(event)" id="voice-input-btn" title="Voice Input (Microphone)" class="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg transition flex items-center justify-center cursor-pointer">
+          <i data-lucide="mic" class="w-4 h-4"></i>
+        </button>
+        <button type="submit" class="p-2 bg-govNavy-800 text-white rounded-lg hover:bg-govNavy-700 transition cursor-pointer">
           <i data-lucide="send" class="w-4 h-4"></i>
         </button>
       </form>
+      <div id="voice-status-indicator" class="hidden mt-1.5 px-2 py-1 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-md text-[10px] text-red-600 dark:text-red-400 font-semibold flex items-center justify-between animate-pulse">
+        <div class="flex items-center space-x-1.5">
+          <span class="w-2 h-2 rounded-full bg-red-500"></span>
+          <span>🎙️ Microphone Active: Listening... speak your query</span>
+        </div>
+        <button type="button" onclick="stopVoiceInput()" class="text-[9px] underline text-red-700 dark:text-red-300">Stop</button>
+      </div>
     </div>
   </div>
 

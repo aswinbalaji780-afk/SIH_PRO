@@ -1,0 +1,21 @@
+{
+  "name": "National Skill Intelligence Platform",
+  "short_name": "SkillIntel",
+  "description": "AI-Enabled Competency Assessment, Skill Gap Analysis & Capacity Building for India's Official Statistical System (MoSPI / NSSTA / iGOT Karmayogi)",
+  "start_url": "/mobile/",
+  "scope": "/mobile/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a1120",
+  "theme_color": "#0c2340",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%230c2340'/><text x='96' y='120' text-anchor='middle' font-size='100' fill='white'>🇮🇳</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "government"],
+  "lang": "en-IN"
+}
